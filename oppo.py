@@ -9,7 +9,7 @@ cron: 0 8 * * *
 new Env('OPPO签到');
 getenv name: OPPO_COOKIE
 getenv value: 账号1TOKENSID#账号2session_id&账号2TOKENSID#账号2session_id&...
-            请阅读Problem-3进行配置session_id
+            请阅读 `Problem-3` 进行配置session_id
 
 Update: 2025/07/15
 
@@ -592,8 +592,6 @@ class OPPO:
     def oppo_member_app_sign(self):
         # self.set_log("🤖运行了 oppo_member_app_sign")
 
-        # 目前使用固定sessionId，后续可能需要修改为动态获取
-
         url = f"https://omoapplet-api-cn.heytap.com/activity/signIn/daily?sessionId={self.session_id}&version=2"
 
         headers = {
@@ -631,9 +629,6 @@ class OPPO:
     def today_credits_summary(self):
         # self.set_log("🤖运行了 today_credits_summary")
 
-        # 目前使用固定sessionId，后续可能需要修改为动态获取
-        session_id = "gwii54t3DCVl1OgD1Bm8GUN5RFx6DTVL0t4jmBJV1Tp_AegBCnky1lBnscXvR6y_XcvIX4uyWmi-pDuj5x7ZkP6ZTez2HvDgBVN8uEEWZUM9G-acuHXBuQ"
-
         today = datetime.now().strftime("%Y-%m-%d")
         total_in = 0
         total_out = 0
@@ -651,7 +646,7 @@ class OPPO:
             # self.set_log(f"📑 正在获取第 {page} 页积分记录...")
 
             # 构建分页查询URL
-            url_params = f"sessionId={session_id}&loadSize=15"
+            url_params = f"sessionId={self.session_id}&loadSize=15"
             if last_timestamp:
                 url_params += f"&lastRecordTimeStamp={last_timestamp}"
 
@@ -1251,13 +1246,13 @@ class OPPO:
                 self.oppo_member_app_sign()  # OPPO会员小程序签到
             self.set_log("\n--------各渠道签到--------")
             self.shopping_signIn()  # 执行签到，包括原有活动ID和activity_list中的活动
-            self.set_log("\n-----OPPO商城小程序抽奖-----")
-            self.do_raffle()  # 执行抽奖
             self.set_log("\n--------累计签到奖励--------")
             for activity in self.activity_list:  # 使用专门地累计签到列表
                 self.check_cumulative_sign_in(activity)  # 检查累计签到奖励并领取
             self.set_log("\n------各渠道小任务签到------")
             self.get_task()  # 获取任务列表
+            self.set_log("\n-----OPPO商城小程序抽奖-----")
+            self.do_raffle()  # 执行抽奖
             if self.session_id != "":
                 self.set_log("\n------今日积分收入统计------")
                 self.today_credits_summary()  # 今日积分收入统计
