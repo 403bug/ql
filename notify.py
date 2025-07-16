@@ -74,7 +74,7 @@ push_config = {
 
     'PUSH_PLUS_TOKEN': '214fb017c9074b5aa0ad6245aeed7f39',              # pushplus 推送的用户令牌
     'PUSH_PLUS_USER': '',               # pushplus 推送的群组编码
-    'PUSH_PLUS_TEMPLATE': 'html',       # pushplus 发送模板，支持html,txt,json,markdown,cloudMonitor,jenkins,route,pay
+    'PUSH_PLUS_TEMPLATE': 'markdown',       # pushplus 发送模板，支持html,txt,json,markdown,cloudMonitor,jenkins,route,pay
     'PUSH_PLUS_CHANNEL': 'wechat',      # pushplus 发送渠道，支持wechat,webhook,cp,mail,sms
     'PUSH_PLUS_WEBHOOK': '',            # pushplus webhook编码，可在pushplus公众号上扩展配置出更多渠道
     'PUSH_PLUS_CALLBACKURL': '',        # pushplus 发送结果回调地址，会把推送最终结果通知到这个地址上
