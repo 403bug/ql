@@ -1134,13 +1134,25 @@ class OPPO:
 
     # 运行列表
     def run(self):
+        # 1. 优先读取环境变量
         OPPO_COOKIE = os.getenv("OPPO_COOKIE")
         # OPPO_COOKIE ="eyJhbGciOiJFQ0RTQSIsInYiOiIxIn0.eyJleHAiOjE3NTQ2MTQ1MDgyNzcsImlkIjoiMzgwNTk3MDM1IiwiaWRjIjoic2hvdW1pbmciLCJ0aWQiOiJsR0I0UzRiS2M3TysyNkxseE9OMkduVHJJWjdxeWs0M0Ewa3dLTFUrUFpMTmJGUjE4QzVYaXlwOVBENGxqOGdKZXUxbHV4ejVyTmZyUXc5YnNOQ1BtUXFVMkJwM0htMWVpb0RsQWRYYWxxYz0ifQ.MEUCIFSRumLTTigWR99qzib4ea_fedCaSvGSq8DPcXdWsozyAiEAg0pvdWFojA6CHuaNsggso-UmVBcoI1E6NNnNExtI4RQ#gwii54t3DCVl1OgD1Bm8Gfu2nNOZ7fEtBwtuA2KK3nedfEjSkPEV84EPWklYE_eGJw0gpZs3rE8"
         # OPPO_COOKIE = "eyJhbGciOiJFQ0RTQSIsInYiOiIxIn0.first.abc&eyJhbGciOiJFQ0RTQSIsInYiOiIxIn0.second.abc"
         if not OPPO_COOKIE:
-            notify.send("OPPO_COOKIE", '🙃OPPO_COOKIE 变量未设置')
-            self.set_log('⚠️OPPO_COOKIE 变量未设置')
-            exit()
+            self.set_log("⚠️读取环境变量配置失败，正在读取本地文件。")
+            # 2. 尝试读取本地oppoConfig.json
+            try:
+                with open('oppoConfig.json', 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    if "OPPO_COOKIE" in config:
+                        OPPO_COOKIE = config["OPPO_COOKIE"]
+            except Exception:
+                self.set_log('⚠️读取本地文件 OPPO_COOKIE 失败')
+                exit()
+            if not OPPO_COOKIE:
+                notify.send("OPPO_COOKIE", '🙃OPPO_COOKIE 变量未设置')
+                self.set_log('⚠️OPPO_COOKIE 变量未设置')
+                exit()
         self.set_log('\u2705OPPO_COOKIE 变量读取成功')
         # 初始化活动列表（如果还没有初始化）
         if not hasattr(self, 'activity_list') or self.activity_list is None:
