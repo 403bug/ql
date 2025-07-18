@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # _*_ coding:utf-8 _*_
-
 import hashlib
 import hmac
 import json
@@ -15,7 +14,6 @@ from email.header import Header
 from email.utils import formataddr
 
 import requests
-
 # 原先的 print 函数和主线程的锁
 _print = print
 mutex = threading.Lock()
