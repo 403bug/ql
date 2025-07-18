@@ -47,16 +47,15 @@ class PCR532:
         try:
             response = requests.post(url, data=payload, headers=headers)
             response.raise_for_status()  # 检查HTTP错误
-
             j = response.text
             if j :
-                self.set_log(j)
+                self.set_log("🎉" + j)
         except requests.exceptions.RequestException as e:
             self.set_log(f"💥请求失败: {e}")
         except Exception as e:
             self.set_log(f"💥未预期的错误: {e}")
             if 'response' in locals():
-                self.set_log(f"响应内容: {response.text[:200]}...")  # 只显示前200个字符，避免日志过长
+                self.set_log(f"💥响应内容: {response.text[:200]}...")  # 只显示前200个字符，避免日志过长
 
     def info_search(self):
         url = "https://www.rfidfans.com/upload/info_search.php"
@@ -77,14 +76,14 @@ class PCR532:
             response.raise_for_status()
             j = response.json()
             if isinstance(j, list):
-                for userinfo in j:
-                    self.set_log(f"账号：{userinfo.get('username','')}，金币：{userinfo.get('jinbi','')}")
+                self.set_log(f"👤账号：{j[0]['username']}")
+                self.set_log(f"💰金币：{j[0]['jinbi']}")
             else:
-                self.set_log(f"返回内容异常：{response.text}")
+                self.set_log(f"💥返回内容异常：{response.text}")
         except Exception as e:
             self.set_log(f"💥查询个人设备失败: {e}")
             if 'response' in locals():
-                self.set_log(f"响应内容: {response.text[:200]}...")
+                self.set_log(f"💥响应内容: {response.text[:200]}...")
 
     # 新增日志
     def set_log(self, text):
@@ -134,7 +133,7 @@ class PCR532:
 
 
         print("\n\n") # 用于与推送通知分割开
-        notify.send("PCR532签到", self.get_log())
+        # notify.send("PCR532签到", self.get_log())
 
 
 
