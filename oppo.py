@@ -87,7 +87,7 @@ class OPPO:
         # self.set_log("🤖运行了__init__")
         self.ck = ''
         self.apkPkg = 'com.oppo.store'
-        self.UA = "Mozilla/5.0 (Linux; Android 15; PJD110 Build/AP3A.240617.008; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.6723.58 Mobile Safari/537.36 oppostore/404503 ColorOS/V15.0.0 brand/OnePlus model/PJD110"
+        self.UA = 'Mozilla/5.0 (Linux; Android 15; PJD110 Build/AP3A.240617.008; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.6723.58 Mobile Safari/537.36 oppostore/404503 ColorOS/V15.0.0 brand/OnePlus model/PJD110'
         # 修改为任务活动对象列表
         self.activityId_taskActivityInfo = []
         self.activity_list = []
@@ -950,11 +950,11 @@ class OPPO:
                     tid = row["threadBaseInfoVO"]["tid"]
                     uid = row["author"]["uid"]
                     praise_status = row["praiseStatus"]
-                    if praise_status == 0:  # 0 表示未点赞
-                        # self.set_log(f"⏩准备点赞帖子 tid: {tid}, uid: {uid}")
+                    # self.set_log(f"⏩准备点赞帖子 tid: {tid}, uid: {uid}")
+                    self.thumbsup(tid, uid)
+                    if praise_status != 0:  # 0 表示未点赞
+                        self.set_log(f"\u2705帖子 tid: {tid} 已点赞，正在取消并再次签到")
                         self.thumbsup(tid, uid)
-                    else:
-                        self.set_log(f"\u2705帖子 tid: {tid} 已点赞，跳过")
             else:
                 self.set_log(f"❌获取点赞列表失败，{j['msg']}")
         except (KeyError, ValueError):
@@ -1033,11 +1033,11 @@ class OPPO:
             'tz': "Asia/Shanghai"
         }
         response = requests.post(url, params=params, headers=headers)
-        # self.set_log(response.text)
+        self.set_log(response.text)
         try:
             j = ujson.loads(response.text)
             if j["code"] == 200:
-                if j['data']['todaySigned']:
+                if 'todaySigned' in j["data"]:
                     self.set_log('➖今天已经签到过啦！')
                 else:
                     self.set_log('🎉今天签到成功！')
