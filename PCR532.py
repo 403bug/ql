@@ -131,7 +131,6 @@ class PCR532:
             self.set_log("\n---------查询积分---------")
             self.info_search()
 
-
         print("\n\n") # 用于与推送通知分割开
         # notify.send("PCR532签到", self.get_log())
 
