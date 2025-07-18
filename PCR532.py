@@ -9,7 +9,8 @@ new Env('PCR532签到');
 Update: 2025/07/18
 
 getenv name: PCR532_COOKIE
-getenv value: 账号1 username#账号1 password&账号2 username#账号2 password&...
+getenv value: 账号1 username#账号1 password#账号1 USERID&账号2 username#账号2 password#账号2 USERID&...
+
 
 """
 import base64
