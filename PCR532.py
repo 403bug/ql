@@ -4,7 +4,7 @@
 """
 File: PCR532.py(PCR532签到)
 Author: sjmy
-cron: * 8 * * *
+cron: 0 8 * * *
 new Env('PCR532签到');
 Update: 2025/07/18
 
@@ -92,8 +92,8 @@ class PCR532:
         self.Log = self.Log + "\r\n" + text
     # 获取日志
     def get_log(self):
-        # return self.Log.replace("\n","\r\n") # 用于 windows 和 Linux 换行符切换
-        return self.Log
+        return self.Log.replace("\n","\r\n") # 用于 windows 和 Linux 换行符切换
+        # return self.Log
 
     def run(self):
         PCR532_COOKIE = os.getenv("PCR532_COOKIE")
