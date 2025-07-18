@@ -1,6 +1,6 @@
 
 * text=auto
-
+notify.py export-ignore
 *.sh text eol=lf
 *.py text eol=lf
 *.js text eol=lf
