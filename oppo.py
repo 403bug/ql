@@ -8,7 +8,7 @@ Author: sjmy
 cron: 0 8 * * *
 new Env('OPPO签到');
 getenv name: OPPO_COOKIE
-getenv value: 账号1TOKENSID#账号2session_id&账号2TOKENSID#账号2session_id&...
+getenv value: 账号1 TOKENSID#账号1 session_id&账号2 TOKENSID#账号2 session_id&...
             请阅读 `Problem-3` 进行配置session_id
 
 Update: 2025/07/15
@@ -1137,7 +1137,7 @@ class OPPO:
             self.set_log("⚠️读取环境变量配置失败，正在读取本地文件。")
             # 2. 尝试读取本地oppoConfig.json
             try:
-                with open('oppoConfig.json', 'r', encoding='utf-8') as f:
+                with open('sjmyConfig.json', 'r', encoding='utf-8') as f:
                     config = json.load(f)
                     if "OPPO_COOKIE" in config:
                         OPPO_COOKIE = config["OPPO_COOKIE"]
