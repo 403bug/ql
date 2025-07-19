@@ -76,8 +76,8 @@ class PCR532:
             response.raise_for_status()
             j = response.json()
             if isinstance(j, list):
-                self.set_log(f"👤账号：{j[0]['username']}")
-                self.set_log(f"💰金币：{j[0]['jinbi']}")
+                self.set_log(f"👤账号：`{j[0]['username']}`")
+                self.set_log(f"💰金币：`{j[0]['jinbi']}`")
             else:
                 self.set_log(f"💥返回内容异常：{response.text}")
         except Exception as e:
@@ -88,11 +88,12 @@ class PCR532:
     # 新增日志
     def set_log(self, text):
         print(text)
-        self.Log = self.Log + "\r\n" + text
+        self.Log = self.Log + "\n" + text
     # 获取日志
     def get_log(self):
         # return self.Log.replace("\n","\r\n") # 用于 windows 和 Linux 换行符切换
-        return self.Log
+        return self.Log.replace("\n","<br>") # 用于适配markdown格式输出
+        # return self.Log # 正常输出
 
     def run(self):
         PCR532_COOKIE = os.getenv("PCR532_COOKIE")

@@ -124,7 +124,7 @@ class OPPO:
 
         if activity_matches:
             # self.set_log("======================================================")
-            self.set_log(f"🤓👆🏻找到 {len(activity_matches)} 个活动:")
+            self.set_log(f"🤓👆🏻找到`{len(activity_matches)}`个活动:")
 
             # 创建一个集合来存储已经添加的活动ID，避免重复
             existing_activity_ids = {activity.activityId for activity in self.activity_list}
@@ -141,7 +141,7 @@ class OPPO:
                     if decoded_name == activity_name:  # 如果没有变化，可能不是Unicode转义
                         decoded_name = activity_name
 
-                self.set_log(f"🤓👆🏻活动 {i + 1}: {decoded_name}")
+                self.set_log(f"🤓👆🏻活动 {i + 1}: `{decoded_name}`")
                 # self.set_log(f"🤓👆🏻活动 {i+1}ID: {activity_id}")
 
                 # 检查活动ID是否已经存在于活动列表中
@@ -159,7 +159,7 @@ class OPPO:
                     )
                     existing_activity_ids.add(activity_id)
                 else:
-                    self.set_log(f"🔄活动：{decoded_name} 已存在于活动列表中，跳过添加")
+                    self.set_log(f"🔄活动：`{decoded_name}`已存在于活动列表中，跳过添加")
                     # self.set_log(f"🔄活动：{decoded_name} ID {activity_id} 已存在于活动列表中，跳过添加")
 
             # self.set_log("======================================================")
@@ -199,7 +199,7 @@ class OPPO:
                         )
                     )
                     existing_task_activity_ids.add(task_id)
-                    self.set_log(f"\u2705已添加活动任务:【 {decoded_name}】到列表")
+                    self.set_log(f"\u2705已添加活动任务:`{decoded_name}`到列表")
                     # self.set_log(f"\u2705已添加活动任务: {decoded_name}, ID: {task_id} 到列表")
                 # else:
                 #     self.set_log(f"🔄活动任务 : {decoded_name} 已存在于列表中，跳过添加")
@@ -237,12 +237,12 @@ class OPPO:
                     awardType = j['data']['awardType']
                     awardValue = j['data']['awardValue']
                     if awardType == 1:
-                        self.set_log(f"🎉{activity.activityName} 签到成功，奖励{awardValue} 积分")
+                        self.set_log(f"🎉{activity.activityName} 签到成功，奖励`{awardValue}`积分")
                 elif j["code"] == 5008:  # 5008 表示已经签到过了
-                    self.set_log(f"➖{activity.activityName} ： {j['message']}")
+                    self.set_log(f"➖{activity.activityName} ： `{j['message']}`")
                 else:
                     message = j['message']
-                    self.set_log(f"❌{activity.activityName} 签到失败，{message}")
+                    self.set_log(f"❌{activity.activityName} 签到失败，`{message}`")
             except (KeyError, ValueError):
                 self.set_log(f"💥{activity.activityName} APP： 解析响应数据出错，可能是登录已失效 {response.text} ")
 
@@ -268,7 +268,7 @@ class OPPO:
                     text = element["text"]
                     Type = element["type"]
                     if Type == "coupon" or Type == "credit" or Type == "growing":
-                        self.set_log(f"👛{title}：{text}")
+                        self.set_log(f"👛{title}：`{text}`")
         except (KeyError, ValueError):
             self.set_log(f"💥获取积分额度失败，解析响应数据出错，可能是登录已失效 {response.text} ")
 
@@ -338,7 +338,7 @@ class OPPO:
     # 获取累计签到列表
     def check_cumulative_sign_in(self, activity):
         # self.set_log(f"🤖运行了 check_cumulative_sign_in ")
-        self.set_log(f"👀检查 {activity.activityName} 累计签到情况")
+        self.set_log(f"👀检查`{activity.activityName}`累计签到情况")
         url = f"https://hd.opposhop.cn/api/cn/oapi/marketing/cumulativeSignIn/getSignInDetail?activityId={activity.activityId}"
 
         headers = {
@@ -359,8 +359,8 @@ class OPPO:
                 sign_in_day_num = data.get("signInDayNum", 0)
                 today_signed = data.get("todaySignIn", False)
 
-                self.set_log(f"📊 {activity.activityName} 当前已累计签到 {sign_in_day_num} 天")
-                self.set_log(f"📅 今日是否已签到: {'是' if today_signed else '否'}")
+                self.set_log(f"📊 {activity.activityName} 当前已累计签到`{sign_in_day_num}`天")
+                self.set_log(f"📅 今日是否已签到: `{'是' if today_signed else '否'}`")
 
                 # # 显示基础签到奖励列表
                 # if "baseAwards" in data:
@@ -385,15 +385,15 @@ class OPPO:
                         award_type = self._get_award_type_text(award.get("awardType"))
                         award_value = award.get("awardValue", "未知")
                         status = award.get("status", 0)
-                        status_text = "已领取" if status == 1 else "未达成" if status == 0 else "可领取"
+                        status_text = "➖已领取" if status == 1 else "❌未达成" if status == 0 else "✅可领取"
 
-                        self.set_log(f"  - 累计 {sign_day_num} 天: {award_type} x {award_value} ({status_text})")
+                        self.set_log(f"  - 累计 {sign_day_num} 天: {award_type} x {award_value}`{status_text}`")
 
                         # 如果有可领取的奖励，自动领取
                         if status == 2:  # 可领取状态
                             has_available_award = True
                             self.set_log(
-                                f"🎉 发现可领取的累计签到奖励: 累计 {sign_day_num} 天 {award_type} x {award_value}")
+                                f"🎉 发现可领取的累计签到奖励: `累计 {sign_day_num} 天 {award_type} x {award_value}`")
                             self.draw_cumulative_award(activity, award_id)
 
                     if not has_available_award:
@@ -418,7 +418,7 @@ class OPPO:
     # 领取累计签到奖励
     def draw_cumulative_award(self, activity, award_id):
         # self.set_log(f"🤖运行了 draw_cumulative_award ")
-        self.set_log(f"🔜领取 {activity.activityName} 累计签到奖励")
+        self.set_log(f"🔜领取`{activity.activityName}`累计签到奖励")
         url = "https://hd.opposhop.cn/api/cn/oapi/marketing/cumulativeSignIn/drawCumulativeAward"
 
         payload = {
@@ -447,7 +447,7 @@ class OPPO:
                 sign_day_num = data.get("signInDayNum", 0)
 
                 self.set_log(
-                    f"🎉 累计签到奖励领取成功! 您已累计签到 {sign_day_num} 天，获得 {award_type} x {award_value}")
+                    f"🎉 累计签到奖励领取成功! 您已累计签到·`{sign_day_num}`天，获得`{award_type} x {award_value}`")
                 return True
             elif j["code"] == 5013:  # 重复领取
                 self.set_log(f"ℹ️ {j.get('errorMessage', '累计奖励已领取，重复领取')}")
@@ -507,10 +507,10 @@ class OPPO:
                     self.set_log("❌ 获取抽奖次数失败,可能是账号状态有误。")
                     return False
                 elif raffle_count == 0:
-                    self.set_log("\u2705 今日抽奖次数已用完")
+                    self.set_log("➖今日抽奖次数已用完")
                     return True
                 else:
-                    self.set_log(f"🎁 您当前有 {raffle_count} 次抽奖机会")
+                    self.set_log(f"🎁 您当前有`{raffle_count}`次抽奖机会")
 
                     # 开始抽奖
                     self.set_log("🎲 开始抽奖...")
@@ -567,16 +567,16 @@ class OPPO:
 
                 if inspection_code == 204:
                     self.set_log(
-                        f"ℹ️ 第{current_draw}/{total_draws}次抽奖: {raffle_data['data']['inspectionQualification']['msg']}")
+                        f"ℹ️ 第`{current_draw}/{total_draws}`次抽奖:`{raffle_data['data']['inspectionQualification']['msg']}`")
                     return False
 
                 raffle_winner = raffle_data.get("data", {}).get("raffleWinnerVO", {})
                 award_name = raffle_winner.get("exhibitAwardName", "未知奖品")
 
-                self.set_log(f"🎉 第{current_draw}/{total_draws}次抽奖成功，获得: {award_name}")
+                self.set_log(f"🎉 第`{current_draw}/{total_draws}`次抽奖成功，获得: `{award_name}`")
                 return True
             else:
-                self.set_log(f"❌ 第{current_draw}/{total_draws}次抽奖失败: {raffle_data.get('message', '未知错误')}")
+                self.set_log(f"❌ 第`{current_draw}/{total_draws}`次抽奖失败: `{raffle_data.get('message', '未知错误')}`")
                 return False
 
         except requests.exceptions.RequestException as e:
@@ -606,7 +606,7 @@ class OPPO:
             if data["ret"] == "1":
                 # 签到成功
                 integral = data.get("data", {}).get("integral", 0)
-                self.set_log(f"\u2705 OPPO会员小程序签到成功，获得 {integral} 积分")
+                self.set_log(f"\u2705 OPPO会员小程序签到成功，获得`{integral}`积分")
                 return True
             elif data["ret"] == "0" and data.get("errCode") == "214000023":
                 # 已经签到过
@@ -718,8 +718,8 @@ class OPPO:
         if all_today_records:
             # 获取总积分
             total_amount = data.get("data", {}).get("amount", 0)
-            self.set_log(f"📊 当前积分总额: {total_amount}")
-            self.set_log(f"📝 今日积分收支明细 (共{len(all_today_records)}条记录):")
+            self.set_log(f"📊 当前积分总额:`{total_amount}`")
+            self.set_log(f"📝 今日积分收支明细 (共`{len(all_today_records)}`条记录):")
 
             # 按时间从新到旧排序
             all_today_records.sort(key=lambda x: x.get("createTime", ""), reverse=True)
@@ -739,10 +739,10 @@ class OPPO:
                     total_out += amount
 
             # 显示统计结果
-            self.set_log(f"\u2705 今日积分收入: +{total_in}")
+            self.set_log(f"\u2705 今日积分收入: `+{total_in}`")
             if total_out > 0:
-                self.set_log(f"⚠️ 今日积分支出: -{total_out}")
-            self.set_log(f"📈 今日积分净收入: {total_in - total_out}")
+                self.set_log(f"⚠️ 今日积分支出: `-{total_out}`")
+            self.set_log(f"📈 今日积分净收入: `{total_in - total_out}`")
 
             return True
         else:
@@ -765,7 +765,7 @@ class OPPO:
             if j["code"] == 200:
                 gradeName = j['data']['gradeName']
                 des = j['data']['des']
-                self.set_log(f"🎖️会员等级：{gradeName}({des})")
+                self.set_log(f"🎖️会员等级：`{gradeName}({des})`")
         except (KeyError, ValueError):
             self.set_log(f"💥获取会员等级失败，解析响应数据出错，可能是登录已失效 {response.text} ")
 
@@ -796,7 +796,7 @@ class OPPO:
                     if activity_name and activity_name.strip():
                         task_activity.activityName = activity_name
 
-                    self.set_log(f"⏩正在执行任务列表：{task_activity.activityName}")
+                    self.set_log(f"⏩正在执行任务列表：`{task_activity.activityName}`")
                     for i, element in enumerate(j["data"]["taskDTOList"]):
                         taskName = element['taskName']
                         taskId = element['taskId']
@@ -812,7 +812,7 @@ class OPPO:
 
                         # self.set_log(f"🤓👆🏻获取到任务：{taskName}，任务ID：{taskId}，活动ID：{activityId}，任务类型：{taskType}，任务状态：{taskStatus}，skuId：{skuId}")
                         if taskStatus == 1:  # 未完成
-                            self.set_log(f"⏩{taskName} 任务还未完成，即将执行：")
+                            self.set_log(f"⏩`{taskName}` 任务还未完成，即将执行：")
                             # 这里写判断类型，并进行相应的操作
                             if taskType in [1, 3, 9, 16, 17]:  # 经典提交任务即可领取奖励类型
                                 self.task_signInOrShareTask(taskName, taskId, activityId)
@@ -828,20 +828,20 @@ class OPPO:
                                 self.task_receiveAward(taskName, taskId, activityId)  # 领取奖励
                             else:
                                 self.set_log(
-                                    f"❌{taskName} 任务执行失败，未分配类型：{taskType}:{element['taskTypeName']}")
+                                    f"❌`{taskName}`任务执行失败，未分配类型：{taskType}:{element['taskTypeName']}")
                         elif taskStatus == 2:
-                            self.set_log(f"⏬{taskName} 任务已完成，即将领取奖励：")
+                            self.set_log(f"⏬`{taskName}`任务已完成，即将领取奖励：")
                             self.task_receiveAward(taskName, taskId, activityId)
                         elif taskStatus == 3:
-                            self.set_log(f"➖{taskName} 任务已完成，无需再执行签到。")
+                            self.set_log(f"➖`{taskName}`任务已完成，无需再执行签到。")
                             # 等待完善输出逻辑
                         elif taskStatus == 6:
-                            self.set_log(f"➖{taskName} 任务已领光。")
+                            self.set_log(f"➖`{taskName}`任务已领光。")
                         else:
-                            self.set_log(f"❌{taskName} 任务状态未知")
+                            self.set_log(f"❌`{taskName}`任务状态未知")
                         time.sleep(2)
                 else:
-                    self.set_log(f"⚠️获取任务列表失败，{j['message']}")
+                    self.set_log(f"⚠️获取任务列表失败，`{j['message']}`")
             except (KeyError, ValueError):
                 self.set_log(f"💥获取任务列表失败，解析响应数据出错，可能是登录已失效 {response.text} ")
 
@@ -885,11 +885,11 @@ class OPPO:
                 awardType = j['data']['awardType']
                 awardValue = j['data']['awardType']
                 if awardType == 1:
-                    self.set_log(f"🎉{taskName} 任务完成，奖励{awardValue} 积分")
+                    self.set_log(f"🎉`{taskName}`任务完成，奖励`{awardValue}`积分")
             else:
-                self.set_log(f"❌{taskName} 任务失败，{j['message']}")
+                self.set_log(f"❌`{taskName}`任务失败，`{j['message']}`")
         except (KeyError, ValueError):
-            self.set_log(f"💥{taskName} 任务失败，解析响应数据出错，可能是登录已失效： {response.text} ")
+            self.set_log(f"💥`{taskName}` 任务失败，解析响应数据出错，可能是登录已失效： {response.text} ")
 
     # 预约任务
     def subscribes(self, skuId, taskName, taskId, activityId):
@@ -924,7 +924,7 @@ class OPPO:
         response = requests.get(url, headers=headers)
         try:
             j = ujson.loads(response.text)
-            self.set_log(f"{'✅打开' if Switch else '关闭'}通知权限：{j['message']}")
+            self.set_log(f"{'✅打开' if Switch else '关闭'}通知权限：`{j['message']}`")
         except (KeyError, ValueError):
             self.set_log(f"💥签到失败，解析响应数据出错 {response.text} ")
 
@@ -945,7 +945,7 @@ class OPPO:
         try:
             j = ujson.loads(response.text)
             if j["code"] == 200:
-                self.set_log("\u2705运行了 thumbsupList，获取点赞列表成功")
+                # self.set_log("\u2705获取点赞列表成功")
                 for row in j["data"]["rows"]:
                     tid = row["threadBaseInfoVO"]["tid"]
                     uid = row["author"]["uid"]
@@ -1006,10 +1006,10 @@ class OPPO:
             j = ujson.loads(response.text)
             if j.get("success"):
                 award_name = j["data"]["name"]
-                self.set_log(f"🎉签到成功，获得 {award_name}")
+                self.set_log(f"🎉签到成功，获得`{award_name}`")
             else:
                 error_msg = j["error"]["msg"]
-                self.set_log(f"❌签到失败，{error_msg}")
+                self.set_log(f"❌签到失败，`{error_msg}`")
         except (KeyError, ValueError):
             self.set_log(f"💥签到失败，解析响应数据出错 {response.text} ")
 
@@ -1040,13 +1040,13 @@ class OPPO:
                 if 'todaySigned' in j["data"]:
                     self.set_log('➖今天已经签到过啦！')
                 else:
-                    self.set_log('🎉今天签到成功！')
-                self.set_log('📝累计签到：' + str(j['data']['signDays']) + '天')
-                self.set_log('📝连续签到：' + str(j['data']['continuousSignDays']) + '天')
-                self.set_log('📝再连续签到' + str(j['data']['extSignDays']) + '天，可额外获得' + str(
+                    self.set_log('🎉`今天签到成功！`')
+                self.set_log('📝累计签到：`' + str(j['data']['signDays']) + '`天')
+                self.set_log('📝连续签到：`' + str(j['data']['continuousSignDays']) + '`天')
+                self.set_log('📝再连续签到`' + str(j['data']['extSignDays']) + '`天，可额外获得' + str(
                     j['data']['extCredit']) + '积分')
             else:
-                self.set_log("❌一加论坛签到失败，" + j['msg'])
+                self.set_log(f"❌一加论坛签到失败，`{j['msg']}`")
         except (KeyError, ValueError):
             self.set_log(f"💥一加论坛签到失败，解析响应数据出错{response.text}")
 
@@ -1066,10 +1066,10 @@ class OPPO:
             j = ujson.loads(response.text)
             if j["code"] == 0:
                 # 签到成功，返回 signTitle 的结果
-                self.set_log("🎉" + j["body"]["signTitle"])
+                self.set_log(f'🎉`{j["body"]["signTitle"]}`')
             else:
                 # 其他错误情况
-                self.set_log(f"➖阅读签到失败：{j['msg']}")
+                self.set_log(f"➖阅读签到失败：`{j['msg']}`")
         except (KeyError, ValueError):
             self.set_log(f"💥阅读签到失败，解析响应数据出错{response.text}")
 
@@ -1081,7 +1081,8 @@ class OPPO:
     # 获取日志
     def get_log(self):
         # return self.Log.replace("\n","\r\n")
-        return self.Log
+        return self.Log.replace("\n","\n\n") # 用于适配markdown格式输出
+        # return self.Log
 
     # token检测
     def tokenCheck(self):
@@ -1115,7 +1116,7 @@ class OPPO:
                                       .fromtimestamp(token_exp_time)
                                       .astimezone()
                                       .strftime('%Y-%m-%d %H:%M:%S %Z'))
-                    self.set_log("📆该token有效期至：" + endReflashTime)
+                    self.set_log(f"📆该token有效期至：`{endReflashTime}`")
                     return True
                 else:
                     self.set_log("⚠️token格式异常，未找到过期时间")
@@ -1140,13 +1141,13 @@ class OPPO:
                     if "OPPO_COOKIE" in config:
                         OPPO_COOKIE = config["OPPO_COOKIE"]
             except Exception:
-                self.set_log('⚠️读取本地文件 OPPO_COOKIE 失败')
+                self.set_log('⚠️读取本地文件`OPPO_COOKIE`失败')
                 exit()
             if not OPPO_COOKIE:
-                notify.send("OPPO_COOKIE", '🙃OPPO_COOKIE 变量未设置')
+                notify.send("OPPO_COOKIE", '🙃`OPPO_COOKIE` 变量未设置')
                 self.set_log('⚠️OPPO_COOKIE 变量未设置')
                 exit()
-        self.set_log('\u2705OPPO_COOKIE 变量读取成功')
+        self.set_log('\u2705`OPPO_COOKIE` 变量读取成功')
         # 初始化活动列表（如果还没有初始化）
         if not hasattr(self, 'activity_list') or self.activity_list is None:
             self.activity_list = []
@@ -1215,10 +1216,10 @@ class OPPO:
         ])
 
         ck_list = OPPO_COOKIE.split('&')
-        self.set_log("---------共" + str(int(len(ck_list))) + "个账号---------")
+        self.set_log(f"---------共`{str(int(len(ck_list)))}`个账号---------")
         for tokens in ck_list:
             if int(len(ck_list)) > 1:
-                self.set_log(f"\n---------第{ck_list.index(tokens) + 1}个账号---------")
+                self.set_log(f"\n---------第`{ck_list.index(tokens) + 1}`个账号---------")
             my_token = tokens.split('#')
             if my_token == '' or int(len(my_token)) != 2:
                 self.set_log("⚠️账号格式有误，请检查账号后进行重试")
