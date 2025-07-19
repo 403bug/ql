@@ -1033,7 +1033,7 @@ class OPPO:
             'tz': "Asia/Shanghai"
         }
         response = requests.post(url, params=params, headers=headers)
-        self.set_log(response.text)
+        # self.set_log(response.text)
         try:
             j = ujson.loads(response.text)
             if j["code"] == 200:
