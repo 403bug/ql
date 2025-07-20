@@ -92,7 +92,7 @@ class PCR532:
     # 获取日志
     def get_log(self):
         # return self.Log.replace("\n","\r\n") # 用于 windows 和 Linux 换行符切换
-        return self.Log.replace("\n","<br>") # 用于适配markdown格式输出
+        return self.Log.replace("\n","\n\n") # 用于适配markdown格式输出
         # return self.Log # 正常输出
 
     def run(self):
