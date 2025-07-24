@@ -5,7 +5,7 @@
 File: OPPO.py(OPPO签到)
 Author-original: ytt447735
 Author: sjmy
-cron: 0 8 * * *
+cron: 15 8 * * *
 new Env('OPPO签到');
 getenv name: OPPO_COOKIE
 getenv value: 账号1 TOKENSID#账号1 session_id&账号2 TOKENSID#账号2 session_id&...

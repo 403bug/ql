@@ -4,7 +4,7 @@
 """
 File: PCR532.py(PCR532签到)
 Author: sjmy
-cron: 0 8 * * *
+cron: 10 8 * * *
 new Env('PCR532签到');
 Update: 2025/07/18
 
