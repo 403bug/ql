@@ -129,7 +129,7 @@ class PCR532:
             self.passB = base64.b64encode('pn532cardreader'.encode('utf-8')).decode()
             self.set_log("\n---------开始签到---------")
             self.pcr_sign()
-            self.set_log("\n---------查询积分---------")
+            # self.set_log("\n---------查询积分---------")
             self.info_search()
 
         print("\n\n") # 用于与推送通知分割开
