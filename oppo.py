@@ -318,10 +318,10 @@ class OPPO:
                     self.set_log("✅ 近期没有即将过期的积分")
 
                 # 显示积分规则提示
-                if "clearTips" in data:
-                    self.set_log("\n📝 积分规则：")
-                    for tip in data["clearTips"]:
-                        self.set_log(f"• {tip}")
+                # if "clearTips" in data:
+                #     self.set_log("\n📝 积分规则：")
+                #     for tip in data["clearTips"]:
+                #         self.set_log(f"• {tip}")
             else:
                 self.set_log(f"❌获取积分过期情况失败：{j.get('resultMsg', '未知错误')}")
         except requests.exceptions.RequestException as e:
@@ -376,8 +376,9 @@ class OPPO:
                 # 处理累计签到奖励列表
                 if "cumulativeAwards" in data:
                     cumulative_awards = data["cumulativeAwards"]
-                    self.set_log("🎁 累计签到奖励列表:")
+                    # self.set_log("🎁 累计签到奖励列表:")
 
+                    # 检查是否有可领取的奖励
                     has_available_award = False
                     for award in cumulative_awards:
                         sign_day_num = award.get("signDayNum", 0)
@@ -386,8 +387,8 @@ class OPPO:
                         award_value = award.get("awardValue", "未知")
                         status = award.get("status", 0)
                         status_text = "➖已领取" if status == 1 else "❌未达成" if status == 0 else "✅可领取"
-
-                        self.set_log(f"  - 累计 {sign_day_num} 天: {award_type} x {award_value}`{status_text}`")
+                        # 累计签到列表详情
+                        # self.set_log(f"  - 累计 {sign_day_num} 天: {award_type} x {award_value}`{status_text}`")
 
                         # 如果有可领取的奖励，自动领取
                         if status == 2:  # 可领取状态
@@ -812,7 +813,7 @@ class OPPO:
 
                         # self.set_log(f"🤓👆🏻获取到任务：{taskName}，任务ID：{taskId}，活动ID：{activityId}，任务类型：{taskType}，任务状态：{taskStatus}，skuId：{skuId}")
                         if taskStatus == 1:  # 未完成
-                            self.set_log(f"⏩`{taskName}` 任务还未完成，即将执行：")
+                            self.set_log(f"🤓👆🏻`{taskName}` 任务还未完成，即将执行：")
                             # 这里写判断类型，并进行相应的操作
                             if taskType in [1, 3, 9, 16, 17]:  # 经典提交任务即可领取奖励类型
                                 self.task_signInOrShareTask(taskName, taskId, activityId)
@@ -953,7 +954,7 @@ class OPPO:
                     # self.set_log(f"⏩准备点赞帖子 tid: {tid}, uid: {uid}")
                     self.thumbsup(tid, uid)
                     if praise_status != 0:  # 0 表示未点赞
-                        self.set_log(f"\u2705帖子 tid: {tid} 已点赞，正在取消并再次签到")
+                        # self.set_log(f"\u2705帖子 tid: {tid} 已点赞，正在取消并再次签到")
                         self.thumbsup(tid, uid)
             else:
                 self.set_log(f"❌获取点赞列表失败，{j['msg']}")
