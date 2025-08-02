@@ -42,10 +42,8 @@ import os
 import re
 import time
 from datetime import datetime
-
 import requests
 import ujson
-
 import notify
 
 
@@ -83,6 +81,15 @@ class ActivityInfo:
 
 class APP :
     def __init__(self, encryptedId, apkPkg, creditsAddActionId, business, s_channel, source_type):
+        """
+        初始化 APP 类的实例。
+        :param encryptedId: 加密 ID
+        :param apkPkg: APK 包名
+        :param creditsAddActionId: 积分增加动作 ID
+        :param business: 业务信息
+        :param s_channel: 设备信息
+        :param source_type: 来源类型
+        """
         self.encryptedId = encryptedId
         self.apkPkg = apkPkg
         self.creditsAddActionId = creditsAddActionId
