@@ -39,12 +39,14 @@ Future:
 import base64
 import json
 import os
-import notify
-from datetime import datetime
-import ujson
-import requests
 import re
 import time
+from datetime import datetime
+
+import requests
+import ujson
+
+import notify
 
 
 # 定义 ActivityInfo 类
@@ -79,6 +81,14 @@ class ActivityInfo:
         }
         return json.dumps(data, ensure_ascii=False)
 
+class APP :
+    def __init__(self, encryptedId, apkPkg, creditsAddActionId, business, s_channel, source_type):
+        self.encryptedId = encryptedId
+        self.apkPkg = apkPkg
+        self.creditsAddActionId = creditsAddActionId
+        self.business = business
+        self.s_channel = s_channel
+        self.source_type = source_type
 
 class OPPO:
 
@@ -92,23 +102,23 @@ class OPPO:
         self.activityId_taskActivityInfo = []
         self.activity_list = []
         self.session_id = ''
+        self.appList = []
 
     # 获取签到渠道ID和活动ID
-    def get_activityId(self):
+    def get_activityId(self, app:APP):
         # self.set_log("🤖运行了get_activityId")
-        url = "https://hd.opposhop.cn/bp/b371ce270f7509f0?nightModelEnable=true&us=wode&um=qiandaobanner"
-        payload = {}
+        url = f'https://hd.opposhop.cn/bp/{app.encryptedId}?nightModelEnable=true&us=wode&um=qiandaobanner'
         headers = {
-            'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}",
+            'Cookie': f"apkPkg={app.apkPkg}; TOKENSID=TOKEN_{self.ck}",
             'User-Agent': self.UA
         }
-        response = requests.request("GET", url, headers=headers, data=payload)
+        response = requests.request("GET", url, headers=headers)
         # 确保响应使用UTF-8编码
         response.encoding = 'utf-8'
 
         # 初始化活动列表（如果还没有初始化）
-        if not hasattr(self, 'activity_list') or self.activity_list is None:
-            self.activity_list = []
+        # if not hasattr(self, 'activity_list') or self.activity_list is None:
+        #     self.activity_list = []
 
         # 获取所有的活动ID和活动名称
         # 尝试匹配 "activityInfo":{"activityId":"1938150025645531136","activityName":"金钻会员-每日签到-商城客户端（25年7月）"}
@@ -150,11 +160,11 @@ class OPPO:
                     self.activity_list.append(
                         ActivityInfo(
                             decoded_name,  # 使用解码后的名称
-                            'com.oppo.store',  # 默认使用OPPO商城的包名
+                            app.apkPkg,  # 使用默认的积分增加动作ID
                             activity_id,
-                            "1788913e6d9e4683b8b9ab0088733560",  # 使用默认的积分增加动作ID
-                            1,  # 默认业务类型为1
-                            'oppo_appstore'
+                            app.creditsAddActionId,  # 使用默认的积分增加动作ID
+                            app.business,  # 默认业务类型为1
+                            app.s_channel  # 默认渠道（对应s_channel）
                         )
                     )
                     existing_activity_ids.add(activity_id)
@@ -191,11 +201,11 @@ class OPPO:
                     self.activityId_taskActivityInfo.append(
                         ActivityInfo(
                             decoded_name,  # 活动名称
-                            'com.oppo.store',  # 默认使用OPPO商城的包名
+                            app.apkPkg,  # 使用该app默认apkpkg
                             task_id,  # 活动ID
-                            "",  # 使用默认的积分增加动作ID
-                            501,  # 默认业务类型为501（对应source_type）
-                            'oppo_appstore'  # 默认渠道（对应s_channel）
+                            "",  # task 不需要此字段
+                            app.source_type,  # 使用该app默认类型
+                            app.s_channel  # 该app默认渠道
                         )
                     )
                     existing_task_activity_ids.add(task_id)
@@ -292,10 +302,7 @@ class OPPO:
             'Host': 'credit.heytap.com',
             'content-type': 'application/json;charset=UTF-8',
             'user-agent': self.UA,
-            'accept': '*/*',
-            'origin': 'https://credit.heytap.com',
             'x-requested-with': self.apkPkg,
-            'referer': 'https://credit.heytap.com/credit/detail/index.html?toolbarType=1',
             'accept-language': 'zh-CN',
             'Cookie': f"TOKENSID=TOKEN_{self.ck}"
         }
@@ -577,7 +584,8 @@ class OPPO:
                 self.set_log(f"🎉 第`{current_draw}/{total_draws}`次抽奖成功，获得: `{award_name}`")
                 return True
             else:
-                self.set_log(f"❌ 第`{current_draw}/{total_draws}`次抽奖失败: `{raffle_data.get('message', '未知错误')}`")
+                self.set_log(
+                    f"❌ 第`{current_draw}/{total_draws}`次抽奖失败: `{raffle_data.get('message', '未知错误')}`")
                 return False
 
         except requests.exceptions.RequestException as e:
@@ -1014,7 +1022,7 @@ class OPPO:
         except (KeyError, ValueError):
             self.set_log(f"💥签到失败，解析响应数据出错 {response.text} ")
 
-    # 一加论坛签到
+    # 一加社区签到
     def bbsSign(self):
         # self.set_log("🤖运行了 bbsSign")
         url = "https://bbs-api-cn.oneplus.com/task/api/sign/v1/create"
@@ -1047,9 +1055,9 @@ class OPPO:
                 self.set_log('📝再连续签到`' + str(j['data']['extSignDays']) + '`天，可额外获得' + str(
                     j['data']['extCredit']) + '积分')
             else:
-                self.set_log(f"❌一加论坛签到失败，`{j['msg']}`")
+                self.set_log(f"❌一加社区签到失败，`{j['msg']}`")
         except (KeyError, ValueError):
-            self.set_log(f"💥一加论坛签到失败，解析响应数据出错{response.text}")
+            self.set_log(f"💥一加社区签到失败，解析响应数据出错{response.text}")
 
     #  阅读签到
     def zhangyueSign(self):
@@ -1082,7 +1090,7 @@ class OPPO:
     # 获取日志
     def get_log(self):
         # return self.Log.replace("\n","\r\n")
-        return self.Log.replace("\n","\n\n") # 用于适配markdown格式输出
+        return self.Log.replace("\n", "\n\n")  # 用于适配markdown格式输出
         # return self.Log
 
     # token检测
@@ -1149,75 +1157,43 @@ class OPPO:
                 self.set_log('⚠️OPPO_COOKIE 变量未设置')
                 exit()
         self.set_log('\u2705`OPPO_COOKIE` 变量读取成功')
-        # 初始化活动列表（如果还没有初始化）
-        if not hasattr(self, 'activity_list') or self.activity_list is None:
-            self.activity_list = []
 
-        # 初始化任务活动列表
-        self.activityId_taskActivityInfo.extend([
-            ActivityInfo(  # 我的一加应用内签到任务
-                '做任务赚积分-MYOPPO客户端（25年5月）',
-                'com.oneplus.member',
-                '1906916561005060096',
-                "",
-                502,
-                'jfstore'
-            ),
-            ActivityInfo(  # OPPO社区APP里的任务
-                '【社区签到】任务中心（25年1-7月）',
-                'com.oppo.community',
-                '1872557968655130624',
-                "",
-                506,
-                'oppo_community'
-            ),
-            ActivityInfo(  # OPPO商城微信小程序里的任务
-                '25年07月小程序签到任务',
-                'com.oppo.store',
-                '1937073820783616000',
-                "",
-                503,
-                'program_wx'
-            ),
-            ActivityInfo(  # OPPO商城APP内签到任务
-                '【商城签到】任务中心（25年1-7月）',
-                'com.oppo.store',
-                '1872557850459643904',
-                "",
-                501,
-                'oppo_appstore'
-            )
-        ])
-
-        self.activity_list.extend([
-            ActivityInfo("我的一加 APP",
-                         'com.oneplus.member',
-                         "1939610017808523264",
-                         "ed4d8b155251413a982577737cd41b4f",
-                         2,
-                         'jfstore'),
-            ActivityInfo("OPPO商城 APP",
-                         'com.oppo.store',
-                         "1938150025645531136",
-                         "1788913e6d9e4683b8b9ab0088733560",
-                         1,
-                         'oppo_appstore'),
-            ActivityInfo("OPPO商城-微信小程序",
-                         'com.oppo.store',
-                         "1937045637514403840",
-                         "1788913e6d9e4683b8b9ab0088733560",
-                         1,
-                         'program_wx'),
-            ActivityInfo("OPPO社区 APP",
-                         'com.oppo.community',
-                         "1938143899864539136",
-                         "1788913e6d9e4683b8b9ab0088733560",
-                         1,
-                         'oppo_community')
-        ])
 
         ck_list = OPPO_COOKIE.split('&')
         self.set_log(f"---------共`{str(int(len(ck_list)))}`个账号---------")
+        # 配置获取活动ID的encryptedId
+        self.appList = [
+            APP(  # OPPO小程序 + OPPO商城
+                'b371ce270f7509f0',
+                'com.oppo.store',
+                '1788913e6d9e4683b8b9ab0088733560',
+                1,
+                'oppo_appstore',
+                501
+            ), APP(  # 我的一加
+                '5066c3d8d8324865',
+                'com.oneplus.oppomobile',
+                'ed4d8b155251413a982577737cd41b4f',
+                2,
+                'jfstore',
+                502
+            ), APP(  # OPPO社区
+                'd85d9aa65e007d66',
+                'com.oppo.store',
+                '1788913e6d9e4683b8b9ab0088733560',
+                1,
+                'oppo_community',
+                506
+            ), APP(  # OPPO小程序2
+                '747f65c18da6f6b7',
+                'com.oppo.store',
+                '1788913e6d9e4683b8b9ab0088733560',
+                1,
+                'program_wx',
+                503
+            )
+        ]
+
         for tokens in ck_list:
             if int(len(ck_list)) > 1:
                 self.set_log(f"\n---------第`{ck_list.index(tokens) + 1}`个账号---------")
@@ -1233,14 +1209,15 @@ class OPPO:
             if not self.tokenCheck():
                 self.set_log("⚠️Token不合法，跳过此账号")
                 continue
-            self.set_log("\n---------一加论坛---------")
-            self.bbsSign()  # 一加论坛签到
+            self.set_log("\n---------一加社区---------")
+            self.bbsSign()  # 一加社区签到
             self.set_log("\n---------钱包任务---------")
             self.continueSign()  # 钱包签到
             self.set_log("\n----------阅读----------")
             self.zhangyueSign()  # 阅读签到
             self.set_log("\n---------活动列表---------")
-            self.get_activityId()  # 获取签到标识，同时添加动态获取的活动到activity_list
+            for app in self.appList:
+                self.get_activityId(app)  # 获取签到标识，同时添加动态获取的活动到activity_list
             if self.session_id != "":
                 self.set_log("\n-----OPPO会员小程序签到-----")
                 self.oppo_member_app_sign()  # OPPO会员小程序签到
