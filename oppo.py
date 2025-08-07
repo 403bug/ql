@@ -78,7 +78,7 @@ class ActivityInfo:
             "business": self.business
         }
         return json.dumps(data, ensure_ascii=False)
-
+# 定义 APP 类
 class APP :
     def __init__(self, encryptedId, apkPkg, creditsAddActionId, business, s_channel, source_type):
         """
@@ -819,12 +819,7 @@ class OPPO:
                         activityId = element['activityId']
                         taskType = element['taskType']  # 1=浏览，4=预约， 6=开卡/购买
                         taskStatus = element['taskStatus']  # 是否完成 1=未完成，2=可领取，3=已领取
-                        skuId = ''
-                        if element['attachConfigTwo']:
-                            attachConfigTwo_link = element['attachConfigTwo']['link']
-                            match = re.search(r'skuId=(\d+)', attachConfigTwo_link)
-                            if match:
-                                skuId = match.group(1)
+
 
                         # self.set_log(f"🤓👆🏻获取到任务：{taskName}，任务ID：{taskId}，活动ID：{activityId}，任务类型：{taskType}，任务状态：{taskStatus}，skuId：{skuId}")
                         if taskStatus == 1:  # 未完成
@@ -832,9 +827,19 @@ class OPPO:
                             # 这里写判断类型，并进行相应的操作
                             if taskType in [1, 3, 9, 16, 17]:  # 经典提交任务即可领取奖励类型
                                 self.task_signInOrShareTask(taskName, taskId, activityId)
-                            elif taskType in [4, 5, 6, 10]:  # 预约任务
+                            elif taskType in [4,10]:  # 预约任务
+                                skuId = ''
+                                if element['attachConfigTwo']:
+                                    attachConfigTwo_link = element['attachConfigTwo']['link']
+                                    match = re.search(r'skuId=(\d+)', attachConfigTwo_link)
+                                    if match:
+                                        skuId = match.group(1)
                                 # self.set_log(f"skuId={skuId}")
                                 self.subscribes(skuId, taskName, taskId, activityId)
+                            elif taskType in [5]: # 预约直播
+                                stream_id = element["actionUrl"].split("StreamId=")[1]
+                                self.liveSubscribe(stream_id, taskName, taskId, activityId)
+
                             elif taskType in [23]:  # 打开通知任务
                                 self.PushSwitch(activityId, False)  # 关闭通知
                                 self.PushSwitch(activityId, True)  # 打开通知
@@ -842,16 +847,16 @@ class OPPO:
                             elif taskType in [18]:  # 内容点赞
                                 self.thumbsupList()  # 点赞
                                 self.task_receiveAward(taskName, taskId, activityId)  # 领取奖励
-                            else:
+                            else: # 6:购买商品,
                                 self.set_log(
-                                    f"❌`{taskName}`任务执行失败，未分配类型：{taskType}:{element['taskTypeName']}")
-                        elif taskStatus == 2:
+                                    f"❌`{taskName}`任务执行失败，未分配类型：{taskType}=>{element['taskTypeName']}")
+                        elif taskStatus == 2: # 可领取
                             self.set_log(f"⏬`{taskName}`任务已完成，即将领取奖励：")
                             self.task_receiveAward(taskName, taskId, activityId)
-                        elif taskStatus == 3:
+                        elif taskStatus == 3: # 已领取
                             self.set_log(f"➖`{taskName}`任务已完成，无需再执行签到。")
                             # 等待完善输出逻辑
-                        elif taskStatus == 6:
+                        elif taskStatus == 6: # 已领光
                             self.set_log(f"➖`{taskName}`任务已领光。")
                         else:
                             self.set_log(f"❌`{taskName}`任务状态未知")
@@ -922,6 +927,30 @@ class OPPO:
         # self.set_log("subscribes", response.text)
         j = ujson.loads(response.text)
         if j["code"] == 200:
+            self.task_receiveAward(taskName, taskId, activityId)
+        else:
+            message = j['errorMessage']
+            self.set_log(f"❌{taskName} 预约失败，{message}")
+
+    # 预约任务
+    def liveSubscribe(self, streamId, taskName, taskId, activityId):
+        # self.set_log("🤖运行了 liveSubscribe")
+        url = "https://msec.opposhop.cn/live/app/lives/subscribeV1"
+        payload = {'streamId': streamId}
+        headers = {
+            'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}",
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'okhttp/4.9.3.6'
+        }
+        response = requests.post(url, data=payload, headers=headers)
+        # response = requests.request("POST", url, headers=headers, data=payload)
+        # self.set_log("liveSubscribe", response.text)
+        j = ujson.loads(response.text)
+        if j["code"] == 200:
+            if j["data"]["isSubscribe"]:
+                self.set_log(f"❌{taskName}:{j["data"]["message"]}")
+            else:
+                self.set_log(f"✅{taskName}:直播预约成功")
             self.task_receiveAward(taskName, taskId, activityId)
         else:
             message = j['errorMessage']
