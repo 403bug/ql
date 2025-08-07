@@ -40,6 +40,7 @@ import base64
 import json
 import os
 import re
+import this
 import time
 from datetime import datetime
 import requests
@@ -110,6 +111,134 @@ class OPPO:
         self.activity_list = []
         self.session_id = ''
         self.appList = []
+
+    # 一加社区签到
+    def bbsSign(self):
+        # self.set_log("🤖运行了 bbsSign")
+        url = "https://bbs-api-cn.oneplus.com/task/api/sign/v1/create"
+        params = {
+            'ver': "bbs44102",
+            'timestamp': int(round(time.time() * 1000)),
+            # 'sign': "9ca3735c9d81a55663e6659b282afadb1b9dea4595cd4fedb3597c7f57a1c9ef"
+        }
+        headers = {
+            'User-Agent': "bbs/android/bbs44102",
+            'Accept-Encoding': "gzip",
+            'model': "PJD110",
+            'osver': "android15",
+            'romv': "PJD110_15.0.0.701(CN01)",
+            'lang': "zh-CN",
+            'token': f"TOKEN_{self.ck}",
+            'tz': "Asia/Shanghai"
+        }
+        response = requests.post(url, params=params, headers=headers)
+        # self.set_log(response.text)
+        try:
+            j = ujson.loads(response.text)
+            if j["code"] == 200:
+                if 'todaySigned' in j["data"]:
+                    self.set_log('➖今天已经签到过啦！')
+                else:
+                    self.set_log('🎉`今天签到成功！`')
+                self.set_log('📝累计签到：`' + str(j['data']['signDays']) + '`天')
+                self.set_log('📝连续签到：`' + str(j['data']['continuousSignDays']) + '`天')
+                self.set_log('📝再连续签到`' + str(j['data']['extSignDays']) + '`天，可额外获得' + str(
+                    j['data']['extCredit']) + '积分')
+            else:
+                self.set_log(f"❌一加社区签到失败，`{j['msg']}`")
+        except (KeyError, ValueError):
+            self.set_log(f"💥一加社区签到失败，解析响应数据出错{response.text}")
+
+    # 钱包签到
+    def continueSign(self):
+        # self.set_log("🤖运行了 continueSign")
+        url = "https://hwallet.finzfin.com/act/usersign/v1/continueSign"
+
+        payload = ujson.dumps({
+            "actId": "AID202207111442220933",
+            "funcId": "CONTINUEV2202209161649037309"
+        })
+
+        headers = {
+            'User-Agent': "Mozilla/5.0 (Linux; Android 15; PJD110 Build/AP3A.240617.008; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.6723.58 Mobile Safari/537.36;webank/h5face;webank/2.0 JSBridge/1 wallet/5.37.5_a921687_250522 FinshellWebSDK/4.0.0.18",
+            'Accept': "application/json;charset=UTF-8",
+            'Content-Type': "application/json",
+            'x-token': f"TOKEN_{self.ck}",
+        }
+
+        response = requests.post(url, data=payload, headers=headers)
+        # response = requests.request("POST", url, headers=headers, data=payload)
+        # self.set_log("continueSign", response.text)
+        try:
+            j = ujson.loads(response.text)
+            if j.get("success"):
+                award_name = j["data"]["name"]
+                self.set_log(f"🎉签到成功，获得`{award_name}`")
+            else:
+                error_msg = j["error"]["msg"]
+                self.set_log(f"❌签到失败，`{error_msg}`")
+        except (KeyError, ValueError):
+            self.set_log(f"💥签到失败，解析响应数据出错 {response.text} ")
+
+    #  阅读签到
+    def zhangyueSign(self):
+        # self.set_log("🤖运行了 zhangyueSign")
+
+        url = "https://webboot.zhangyue.com/zycl/newwelfare/sign?usr=i4791337318"
+
+        headers = {
+            'User-Agent': self.UA,
+        }
+
+        response = requests.get(url, headers=headers)
+
+        try:
+            j = ujson.loads(response.text)
+            if j["code"] == 0:
+                # 签到成功，返回 signTitle 的结果
+                self.set_log(f'🎉`{j["body"]["signTitle"]}`')
+            else:
+                # 其他错误情况
+                self.set_log(f"➖阅读签到失败：`{j['msg']}`")
+        except (KeyError, ValueError):
+            self.set_log(f"💥阅读签到失败，解析响应数据出错{response.text}")
+
+    # OPPO会员小程序签到
+    def oppo_member_app_sign(self):
+        # self.set_log("🤖运行了 oppo_member_app_sign")
+
+        url = f"https://omoapplet-api-cn.heytap.com/activity/signIn/daily?sessionId={self.session_id}&version=2"
+
+        headers = {
+            'User-Agent': self.UA
+        }
+
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+
+            data = json.loads(response.text)
+            if data["ret"] == "1":
+                # 签到成功
+                integral = data.get("data", {}).get("integral", 0)
+                self.set_log(f"\u2705 OPPO会员小程序签到成功，获得`{integral}`积分")
+                return True
+            elif data["ret"] == "0" and data.get("errCode") == "214000023":
+                # 已经签到过
+                self.set_log(f"➖ OPPO会员小程序今日已签到: {data.get('errMsg', '奖励已发放')}")
+                return True
+            else:
+                self.set_log(f"❌ OPPO会员小程序签到失败: {data.get('errMsg', '未知错误')}")
+                return False
+
+        except requests.exceptions.RequestException as e:
+            self.set_log(f"💥 OPPO会员小程序签到请求失败: {e}")
+        except json.JSONDecodeError as e:
+            self.set_log(f"💥 解析OPPO会员小程序签到结果失败: {e}")
+        except Exception as e:
+            self.set_log(f"💥 OPPO会员小程序签到过程中出现未预期的错误: {e}")
+
+        return False
 
     # 获取签到渠道ID和活动ID
     def get_activityId(self, app:APP):
@@ -230,124 +359,38 @@ class OPPO:
         #     self.set_log("activity.activityName", activity.activityName)
         #     self.set_log("activity.activityId", activity.activityId)
 
-    # 商城签到
-    def shopping_signIn(self):
+    # 各渠道签到
+    def shopping_signIn(self, activity):
         # self.set_log("🤖运行了 shopping_signIn")
 
-        # 然后使用activity_list中的活动信息进行签到
-        for activity in self.activity_list:
-            url = "https://hd.opposhop.cn/api/cn/oapi/marketing/cumulativeSignIn/signIn"
+        url = "https://hd.opposhop.cn/api/cn/oapi/marketing/cumulativeSignIn/signIn"
 
-            payload = activity.toJson()  # 直接使用toJson方法返回的JSON字符串
+        payload = activity.toJson()  # 直接使用toJson方法返回的JSON字符串
 
-            headers = {
-                's_channel': activity.s_channel,
-                'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}",
-                'User-Agent': self.UA,
-                'Content-Type': 'application/json'
-            }
-            response = requests.request("POST", url, headers=headers, data=payload)
-
-            try:
-                j = ujson.loads(response.text)
-                if j["code"] == 200:
-                    awardType = j['data']['awardType']
-                    awardValue = j['data']['awardValue']
-                    if awardType == 1:
-                        self.set_log(f"🎉{activity.activityName} 签到成功，奖励`{awardValue}`积分")
-                elif j["code"] == 5008:  # 5008 表示已经签到过了
-                    self.set_log(f"➖{activity.activityName} ： `{j['message']}`")
-                else:
-                    message = j['message']
-                    self.set_log(f"❌{activity.activityName} 签到失败，`{message}`")
-            except (KeyError, ValueError):
-                self.set_log(f"💥{activity.activityName} APP： 解析响应数据出错，可能是登录已失效 {response.text} ")
-
-            time.sleep(2)  # 添加间隔时间，避免请求过快
-
-    # 积分额度查询
-    def integral_query(self):
-        # self.set_log("🤖运行了 integral_query")
-        url = "https://msec.opposhop.cn/users/web/memberCenter/assets?couponStatus=1&couponType=0"
-        payload = {}
         headers = {
+            's_channel': activity.s_channel,
             'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}",
-            'User-Agent': self.UA
+            'User-Agent': self.UA,
+            'Content-Type': 'application/json'
         }
-        response = requests.request("GET", url, headers=headers, data=payload)
-        # self.set_log("integral_query", response.text)
-        j = ujson.loads(response.text)
+        response = requests.request("POST", url, headers=headers, data=payload)
+
         try:
+            j = ujson.loads(response.text)
             if j["code"] == 200:
-                self.set_log("💰当前余额：")
-                for i, element in enumerate(j["data"]):
-                    title = element["title"]
-                    text = element["text"]
-                    Type = element["type"]
-                    if Type == "coupon" or Type == "credit" or Type == "growing":
-                        self.set_log(f"👛{title}：`{text}`")
-        except (KeyError, ValueError):
-            self.set_log(f"💥获取积分额度失败，解析响应数据出错，可能是登录已失效 {response.text} ")
-
-    # 积分过期情况查询
-    def check_expire_credits(self):
-        # self.set_log("🤖运行了 check_expire_credits")
-        url = "https://credit.heytap.com/cn/credit-web/credit-expire-info"
-
-        payload = {
-            "country": "CN",
-            "appPackage": self.apkPkg,
-            "imei": None,
-            "model": "PJD110",
-            "sessionId": None,
-            "timestamp": int(round(time.time() * 1000)),  # 当前时间戳
-            "token": f"TOKEN_{self.ck}"
-            # 注意：移除sign参数，服务器可能会自动处理或忽略
-        }
-
-        headers = {
-            'Host': 'credit.heytap.com',
-            'content-type': 'application/json;charset=UTF-8',
-            'user-agent': self.UA,
-            'x-requested-with': self.apkPkg,
-            'accept-language': 'zh-CN',
-            'Cookie': f"TOKENSID=TOKEN_{self.ck}"
-        }
-
-        try:
-            response = requests.post(url, json=payload, headers=headers)
-            response.raise_for_status()  # 检查HTTP错误
-
-            j = json.loads(response.text)
-            if j["result"] == 10000:  # 正常响应
-                data = j["data"]
-
-                # 显示过期积分信息
-                if data.get("expireCredits", False):
-                    expire_amount = data.get("expireAmount", "未知")
-                    expire_date = data.get("expireDate", "未知")
-                    content = data.get("expireCreditsContent", f"{expire_amount} 积分将于 {expire_date} 到期")
-                    self.set_log(f"⚠️ {content}")
-                else:
-                    self.set_log("✅ 近期没有即将过期的积分")
-
-                # 显示积分规则提示
-                # if "clearTips" in data:
-                #     self.set_log("\n📝 积分规则：")
-                #     for tip in data["clearTips"]:
-                #         self.set_log(f"• {tip}")
+                awardType = j['data']['awardType']
+                awardValue = j['data']['awardValue']
+                if awardType == 1:
+                    self.set_log(f"🎉{activity.activityName} 签到成功，奖励`{awardValue}`积分")
+            elif j["code"] == 5008:  # 5008 表示已经签到过了
+                self.set_log(f"➖{activity.activityName} ： `{j['message']}`")
             else:
-                self.set_log(f"❌获取积分过期情况失败：{j.get('resultMsg', '未知错误')}")
-        except requests.exceptions.RequestException as e:
-            self.set_log(f"💥请求失败: {e}")
-        except json.JSONDecodeError as e:
-            self.set_log(f"💥解析响应数据失败: {e}")
-        except KeyError as e:
-            self.set_log(f"💥处理响应数据时出错: {e}")
-        except Exception as e:
-            self.set_log(f"💥未预期的错误: {e}")
-            if 'response' in locals():
-                self.set_log(f"响应内容: {response.text[:200]}...")  # 只显示前200个字符，避免日志过长
+                message = j['message']
+                self.set_log(f"❌{activity.activityName} 签到失败，`{message}`")
+        except (KeyError, ValueError):
+            self.set_log(f"💥{activity.activityName} APP： 解析响应数据出错，可能是登录已失效 {response.text} ")
+
+        time.sleep(2)  # 添加间隔时间，避免请求过快
 
     # 获取累计签到列表
     def check_cumulative_sign_in(self, activity):
@@ -370,8 +413,17 @@ class OPPO:
                 data = j["data"]
 
                 # 显示当前签到情况
-                sign_in_day_num = data.get("signInDayNum", 0)
                 today_signed = data.get("todaySignIn", False)
+                if not today_signed: # 今日未签到
+                    self.set_log(f"❌ {activity.activityName} 今日未签到")
+                    self.shopping_signIn(activity)
+                    time.sleep(2) # 等待2秒，确保签到成功,重新获取数据
+                    response = requests.get(url, headers=headers)
+                    j = json.loads(response.text)
+                    data = j["data"]
+                    today_signed = data.get("todaySignIn", False)
+
+                sign_in_day_num = data.get("signInDayNum", 0)
 
                 self.set_log(f"📊 {activity.activityName} 当前已累计签到`{sign_in_day_num}`天")
                 self.set_log(f"📅 今日是否已签到: `{'是' if today_signed else '否'}`")
@@ -494,6 +546,251 @@ class OPPO:
         else:
             return f"奖励({award_type})"
 
+
+    # 获取任务列表
+    def get_task(self, task_activity):
+        # self.set_log("🤖运行了 get_task")
+
+        url = f"https://hd.opposhop.cn/api/cn/oapi/marketing/task/queryTaskList?activityId={task_activity.activityId}&source=c"
+        payload = {}
+        headers = {
+            'Cookie': f"apkPkg={task_activity.apkPkg}; TOKENSID=TOKEN_{self.ck}",
+            'Accept': 'application/json, text/plain, */*',
+            's_channel': task_activity.s_channel,
+            'source_type': str(task_activity.business),
+            'User-Agent': self.UA
+        }
+        response = requests.request("GET", url, headers=headers, data=payload)
+        # self.set_log("get_task", response.text)
+        try:
+            j = ujson.loads(response.text)
+            if j["code"] == 200:
+                # self.set_log(f"🤓👆🏻获取任务列表成功")
+                activity_name = j["data"]["activityName"]
+                # 更新活动名称，如果API返回的名称不为空
+                if activity_name and activity_name.strip():
+                    task_activity.activityName = activity_name
+
+                self.set_log(f"⏩正在执行任务列表：`{task_activity.activityName}`")
+                # self.set_log(f"⏩正在执行任务列表：`{task_activity.activityId}`")
+                for i, element in enumerate(j["data"]["taskDTOList"]):
+                    taskName = element['taskName']
+                    taskId = element['taskId']
+                    activityId = element['activityId']
+                    taskType = element['taskType']  # 1=浏览，4=预约， 6=开卡/购买
+                    taskStatus = element['taskStatus']  # 是否完成 1=未完成，2=可领取，3=已领取
+
+
+                    # self.set_log(f"🤓👆🏻获取到任务：{taskName}，任务ID：{taskId}，活动ID：{activityId}，任务类型：{taskType}，任务状态：{taskStatus}，skuId：{skuId}")
+                    if taskStatus == 1:  # 未完成
+                        self.set_log(f"🤓👆🏻`{taskName}` 任务还未完成，即将执行：")
+                        # 这里写判断类型，并进行相应的操作
+                        if taskType in [1, 3, 9, 16, 17]:  # 经典提交任务即可领取奖励类型
+                            self.task_signInOrShareTask(taskName, taskId, activityId)
+                        elif taskType in [4,10]:  # 预约任务
+                            skuId = ''
+                            if element['attachConfigTwo']:
+                                attachConfigTwo_link = element['attachConfigTwo']['link']
+                                match = re.search(r'skuId=(\d+)', attachConfigTwo_link)
+                                if match:
+                                    skuId = match.group(1)
+                            # self.set_log(f"skuId={skuId}")
+                            self.subscribes(skuId, taskName, taskId, activityId)
+                        elif taskType in [5]: # 预约直播
+                            stream_id = element["actionUrl"].split("StreamId=")[1]
+                            self.liveSubscribe(stream_id, taskName, taskId, activityId)
+                        elif taskType in [23]:  # 打开通知任务
+                            self.PushSwitch(activityId, False)  # 关闭通知
+                            self.PushSwitch(activityId, True)  # 打开通知
+                            self.task_receiveAward(taskName, taskId, activityId)  # 领取奖励
+                        elif taskType in [18]:  # 内容点赞
+                            self.thumbsupList()  # 点赞
+                            self.task_receiveAward(taskName, taskId, activityId)  # 领取奖励
+                        else: # 6:购买商品,
+                            self.set_log(
+                                f"❌`{taskName}`任务执行失败，未分配类型：{taskType}=>{element['taskTypeName']}")
+                    elif taskStatus == 2: # 可领取
+                        self.set_log(f"⏬`{taskName}`任务已完成，即将领取奖励：")
+                        self.task_receiveAward(taskName, taskId, activityId)
+                    elif taskStatus == 3: # 已领取
+                        self.set_log(f"➖`{taskName}`任务已完成，无需再执行签到。")
+                        # 等待完善输出逻辑
+                    elif taskStatus == 6: # 已领光
+                        self.set_log(f"➖`{taskName}`任务已领光。")
+                    else:
+                        self.set_log(f"❌`{taskName}`任务状态未知")
+                    time.sleep(2)
+            else:
+                self.set_log(f"⚠️获取任务列表失败，`{j['message']}`")
+        except (KeyError, ValueError):
+            self.set_log(f"💥获取任务列表失败，解析响应数据出错，可能是登录已失效 {response.text} ")
+        # 这个OPPO商城的任务在APP里面和小程序里面显示的不一样，特此进行特别处理一下
+        if task_activity.s_channel == 'oppo_appstore':
+            task_activity.s_channel = 'program_wx'
+            task_activity.business = 503
+            self.get_task(task_activity)
+
+    # 提交任务
+    def task_signInOrShareTask(self, taskName, taskId, activityId):
+        # self.set_log("🤖运行了 task_signInOrShareTask")
+        url = f"https://hd.opposhop.cn/api/cn/oapi/marketing/taskReport/signInOrShareTask?taskId={taskId}&activityId={activityId}&taskType=1"
+        payload = {}
+        headers = {
+            'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}",
+            'Accept': 'application/json, text/plain, */*',
+            'User-Agent': self.UA
+        }
+        response = requests.request("GET", url, headers=headers, data=payload)
+        # self.set_log("task_signInOrShareTask", response.text)
+        try:
+            j = ujson.loads(response.text)
+            if j["code"] == 200:
+                self.task_receiveAward(taskName, taskId, activityId)
+            else:
+                message = j['message']
+                self.set_log(f"❌{taskName} 任务提交失败，{message}")
+        except (KeyError, ValueError):
+            self.set_log(f"💥{taskName} 任务提交失败，解析响应数据出错，可能是登录已失效 {response.text} ")
+
+    # 领取任务奖励
+    def task_receiveAward(self, taskName, taskId, activityId):
+        # self.set_log("🤖运行了 task_receiveAward")
+        url = f"https://hd.opposhop.cn/api/cn/oapi/marketing/task/receiveAward?taskId={taskId}&activityId={activityId}"
+        payload = {}
+        headers = {
+            'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}",
+            'Accept': 'application/json, text/plain, */*',
+            'User-Agent': self.UA
+        }
+        response = requests.request("GET", url, headers=headers, data=payload)
+        # self.set_log("task_receiveAward", response.text)
+        try:
+            j = ujson.loads(response.text)
+            if j["code"] == 200:
+                awardType = j['data']['awardType']
+                awardValue = j['data']['awardType']
+                if awardType == 1:
+                    self.set_log(f"🎉`{taskName}`任务完成，奖励`{awardValue}`积分")
+            else:
+                self.set_log(f"❌`{taskName}`任务失败，`{j['message']}`")
+        except (KeyError, ValueError):
+            self.set_log(f"💥`{taskName}` 任务失败，解析响应数据出错，可能是登录已失效： {response.text} ")
+
+    # 预约任务
+    def subscribes(self, skuId, taskName, taskId, activityId):
+        # self.set_log("🤖运行了 subscribes")
+        url = "https://msec.opposhop.cn/goods/web/subscribes/goodsSubscribeV1"
+        payload = f"type=1&skuId={skuId}"
+        headers = {
+            'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}",
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'okhttp/4.9.3.6'
+        }
+        response = requests.post(url, data=payload, headers=headers)
+        # response = requests.request("POST", url, headers=headers, data=payload)
+        # self.set_log("subscribes", response.text)
+        j = ujson.loads(response.text)
+        if j["code"] == 200:
+            self.task_receiveAward(taskName, taskId, activityId)
+        else:
+            message = j['errorMessage']
+            self.set_log(f"❌{taskName} 预约失败，{message}")
+
+    # 直播预约任务
+    def liveSubscribe(self, streamId, taskName, taskId, activityId):
+        # self.set_log("🤖运行了 liveSubscribe")
+        url = "https://msec.opposhop.cn/live/app/lives/subscribeV1"
+        payload = {'streamId': streamId}
+        headers = {
+            'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}",
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'okhttp/4.9.3.6'
+        }
+        response = requests.post(url, data=payload, headers=headers)
+        # response = requests.request("POST", url, headers=headers, data=payload)
+        # self.set_log("liveSubscribe", response.text)
+        j = ujson.loads(response.text)
+        if j["code"] == 200:
+            if j["data"]["isSubscribe"]:
+                self.set_log(f"❌{taskName}:{j["data"]["message"]}")
+            else:
+                self.set_log(f"✅{taskName}:直播预约成功")
+            self.task_receiveAward(taskName, taskId, activityId)
+        else:
+            message = j['errorMessage']
+            self.set_log(f"❌{taskName} 预约失败，{message}")
+
+    # 打开通知
+    def PushSwitch(self, activityId, Switch):
+        # self.set_log("🤖运行了 PushSwitch")
+
+        url = f"https://hd.opposhop.cn/api/cn/oapi/marketing/userEvent/openPushSwitch?activityId={activityId}&eventType={5 if Switch else 4}"
+        headers = {
+            'User-Agent': self.UA,
+            'Accept': "application/json, text/plain, */*",
+            'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}"
+        }
+        response = requests.get(url, headers=headers)
+        try:
+            j = ujson.loads(response.text)
+            self.set_log(f"{'✅打开' if Switch else '关闭'}通知权限：`{j['message']}`")
+        except (KeyError, ValueError):
+            self.set_log(f"💥签到失败，解析响应数据出错 {response.text} ")
+
+    # 获取点赞列表
+    def thumbsupList(self):
+        # self.set_log("🤖运行了 thumbsupList")
+        url = "https://hd.opposhop.cn/api/cn/oapi/java/ugc/frontend/hot/thread/v1/list?contentId=30&viewType=2&dataType=2&limit=10&page=1"
+
+        headers = {
+            'User-Agent': self.UA,
+            'Accept': "application/json, text/plain, */*",
+            'sa_distinct_id': "MEZ5RTA0N2REY3BWcXBZdmxSSzQ5QT09, MEZ5RTA0N2REY3BWcXBZdmxSSzQ5QT09",
+            'Cookie': f"apkPkg=com.oppo.community; TOKENSID=TOKEN_{self.ck}"
+        }
+
+        response = requests.get(url, headers=headers)
+
+        try:
+            j = ujson.loads(response.text)
+            if j["code"] == 200:
+                # self.set_log("\u2705获取点赞列表成功")
+                for row in j["data"]["rows"]:
+                    tid = row["threadBaseInfoVO"]["tid"]
+                    uid = row["author"]["uid"]
+                    praise_status = row["praiseStatus"]
+                    # self.set_log(f"⏩准备点赞帖子 tid: {tid}, uid: {uid}")
+                    self.thumbsup(tid, uid)
+                    if praise_status != 0:  # 0 表示未点赞
+                        # self.set_log(f"\u2705帖子 tid: {tid} 已点赞，正在取消并再次签到")
+                        self.thumbsup(tid, uid)
+            else:
+                self.set_log(f"❌获取点赞列表失败，{j['msg']}")
+        except (KeyError, ValueError):
+            self.set_log(f"💥获取点赞列表失败，解析响应数据出错 {response.text} ")
+
+    # 点赞
+    def thumbsup(self, tid, uid):
+        # self.set_log("🤖运行了 thumbsup")
+        url = "https://hd.opposhop.cn/api/cn/oapi/java/ugc/frontend/praise/thread"
+        payload = {
+            'tid': tid,
+            'uid': uid
+        }
+        headers = {
+            'User-Agent': self.UA,
+            'Cookie': f"apkPkg=com.oppo.community; TOKENSID=TOKEN_{self.ck}",
+        }
+        response = requests.post(url, data=payload, headers=headers)
+        try:
+            j = ujson.loads(response.text)
+            if j["code"] == 200:
+                self.set_log(f"🎉帖子 tid: {tid} ： {j['msg']}")
+            else:
+                self.set_log(f"❌帖子 tid: {tid} 点赞失败，{j['msg']}")
+        except (KeyError, ValueError):
+            self.set_log(f"💥帖子 tid: {tid} 点赞失败，解析响应数据出错 {response.text} ")
+
     # 小程序抽奖功能
     def do_raffle(self):
         # self.set_log("🤖运行了 do_raffle 抽奖功能")
@@ -601,43 +898,6 @@ class OPPO:
             self.set_log(f"💥 解析抽奖结果失败: {e}")
         except Exception as e:
             self.set_log(f"💥 抽奖过程中出现未预期的错误: {e}")
-
-        return False
-
-    # OPPO会员小程序签到
-    def oppo_member_app_sign(self):
-        # self.set_log("🤖运行了 oppo_member_app_sign")
-
-        url = f"https://omoapplet-api-cn.heytap.com/activity/signIn/daily?sessionId={self.session_id}&version=2"
-
-        headers = {
-            'User-Agent': self.UA
-        }
-
-        try:
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-
-            data = json.loads(response.text)
-            if data["ret"] == "1":
-                # 签到成功
-                integral = data.get("data", {}).get("integral", 0)
-                self.set_log(f"\u2705 OPPO会员小程序签到成功，获得`{integral}`积分")
-                return True
-            elif data["ret"] == "0" and data.get("errCode") == "214000023":
-                # 已经签到过
-                self.set_log(f"➖ OPPO会员小程序今日已签到: {data.get('errMsg', '奖励已发放')}")
-                return True
-            else:
-                self.set_log(f"❌ OPPO会员小程序签到失败: {data.get('errMsg', '未知错误')}")
-                return False
-
-        except requests.exceptions.RequestException as e:
-            self.set_log(f"💥 OPPO会员小程序签到请求失败: {e}")
-        except json.JSONDecodeError as e:
-            self.set_log(f"💥 解析OPPO会员小程序签到结果失败: {e}")
-        except Exception as e:
-            self.set_log(f"💥 OPPO会员小程序签到过程中出现未预期的错误: {e}")
 
         return False
 
@@ -785,338 +1045,90 @@ class OPPO:
         except (KeyError, ValueError):
             self.set_log(f"💥获取会员等级失败，解析响应数据出错，可能是登录已失效 {response.text} ")
 
-    # 获取任务列表
-    def get_task(self):
-        # self.set_log("🤖运行了 get_task")
-        # 如果任务活动ID列表为空，直接返回
-        if not self.activityId_taskActivityInfo:
-            return
-        for task_activity in self.activityId_taskActivityInfo:
-            url = f"https://hd.opposhop.cn/api/cn/oapi/marketing/task/queryTaskList?activityId={task_activity.activityId}&source=c"
-            payload = {}
-            headers = {
-                'Cookie': f"apkPkg={task_activity.apkPkg}; TOKENSID=TOKEN_{self.ck}",
-                'Accept': 'application/json, text/plain, */*',
-                's_channel': task_activity.s_channel,
-                'source_type': str(task_activity.business),
-                'User-Agent': self.UA
-            }
-            response = requests.request("GET", url, headers=headers, data=payload)
-            # self.set_log("get_task", response.text)
-            try:
-                j = ujson.loads(response.text)
-                if j["code"] == 200:
-                    # self.set_log(f"🤓👆🏻获取任务列表成功")
-                    activity_name = j["data"]["activityName"]
-                    # 更新活动名称，如果API返回的名称不为空
-                    if activity_name and activity_name.strip():
-                        task_activity.activityName = activity_name
-
-                    self.set_log(f"⏩正在执行任务列表：`{task_activity.activityName}`")
-                    for i, element in enumerate(j["data"]["taskDTOList"]):
-                        taskName = element['taskName']
-                        taskId = element['taskId']
-                        activityId = element['activityId']
-                        taskType = element['taskType']  # 1=浏览，4=预约， 6=开卡/购买
-                        taskStatus = element['taskStatus']  # 是否完成 1=未完成，2=可领取，3=已领取
-
-
-                        # self.set_log(f"🤓👆🏻获取到任务：{taskName}，任务ID：{taskId}，活动ID：{activityId}，任务类型：{taskType}，任务状态：{taskStatus}，skuId：{skuId}")
-                        if taskStatus == 1:  # 未完成
-                            self.set_log(f"🤓👆🏻`{taskName}` 任务还未完成，即将执行：")
-                            # 这里写判断类型，并进行相应的操作
-                            if taskType in [1, 3, 9, 16, 17]:  # 经典提交任务即可领取奖励类型
-                                self.task_signInOrShareTask(taskName, taskId, activityId)
-                            elif taskType in [4,10]:  # 预约任务
-                                skuId = ''
-                                if element['attachConfigTwo']:
-                                    attachConfigTwo_link = element['attachConfigTwo']['link']
-                                    match = re.search(r'skuId=(\d+)', attachConfigTwo_link)
-                                    if match:
-                                        skuId = match.group(1)
-                                # self.set_log(f"skuId={skuId}")
-                                self.subscribes(skuId, taskName, taskId, activityId)
-                            elif taskType in [5]: # 预约直播
-                                stream_id = element["actionUrl"].split("StreamId=")[1]
-                                self.liveSubscribe(stream_id, taskName, taskId, activityId)
-
-                            elif taskType in [23]:  # 打开通知任务
-                                self.PushSwitch(activityId, False)  # 关闭通知
-                                self.PushSwitch(activityId, True)  # 打开通知
-                                self.task_receiveAward(taskName, taskId, activityId)  # 领取奖励
-                            elif taskType in [18]:  # 内容点赞
-                                self.thumbsupList()  # 点赞
-                                self.task_receiveAward(taskName, taskId, activityId)  # 领取奖励
-                            else: # 6:购买商品,
-                                self.set_log(
-                                    f"❌`{taskName}`任务执行失败，未分配类型：{taskType}=>{element['taskTypeName']}")
-                        elif taskStatus == 2: # 可领取
-                            self.set_log(f"⏬`{taskName}`任务已完成，即将领取奖励：")
-                            self.task_receiveAward(taskName, taskId, activityId)
-                        elif taskStatus == 3: # 已领取
-                            self.set_log(f"➖`{taskName}`任务已完成，无需再执行签到。")
-                            # 等待完善输出逻辑
-                        elif taskStatus == 6: # 已领光
-                            self.set_log(f"➖`{taskName}`任务已领光。")
-                        else:
-                            self.set_log(f"❌`{taskName}`任务状态未知")
-                        time.sleep(2)
-                else:
-                    self.set_log(f"⚠️获取任务列表失败，`{j['message']}`")
-            except (KeyError, ValueError):
-                self.set_log(f"💥获取任务列表失败，解析响应数据出错，可能是登录已失效 {response.text} ")
-
-    # 提交任务
-    def task_signInOrShareTask(self, taskName, taskId, activityId):
-        # self.set_log("🤖运行了 task_signInOrShareTask")
-        url = f"https://hd.opposhop.cn/api/cn/oapi/marketing/taskReport/signInOrShareTask?taskId={taskId}&activityId={activityId}&taskType=1"
+    # 积分额度查询
+    def integral_query(self):
+        # self.set_log("🤖运行了 integral_query")
+        url = "https://msec.opposhop.cn/users/web/memberCenter/assets?couponStatus=1&couponType=0"
         payload = {}
         headers = {
             'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}",
-            'Accept': 'application/json, text/plain, */*',
             'User-Agent': self.UA
         }
         response = requests.request("GET", url, headers=headers, data=payload)
-        # self.set_log("task_signInOrShareTask", response.text)
-        try:
-            j = ujson.loads(response.text)
-            if j["code"] == 200:
-                self.task_receiveAward(taskName, taskId, activityId)
-            else:
-                message = j['message']
-                self.set_log(f"❌{taskName} 任务提交失败，{message}")
-        except (KeyError, ValueError):
-            self.set_log(f"💥{taskName} 任务提交失败，解析响应数据出错，可能是登录已失效 {response.text} ")
-
-    # 领取任务奖励
-    def task_receiveAward(self, taskName, taskId, activityId):
-        # self.set_log("🤖运行了 task_receiveAward")
-        url = f"https://hd.opposhop.cn/api/cn/oapi/marketing/task/receiveAward?taskId={taskId}&activityId={activityId}"
-        payload = {}
-        headers = {
-            'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}",
-            'Accept': 'application/json, text/plain, */*',
-            'User-Agent': self.UA
-        }
-        response = requests.request("GET", url, headers=headers, data=payload)
-        # self.set_log("task_receiveAward", response.text)
-        try:
-            j = ujson.loads(response.text)
-            if j["code"] == 200:
-                awardType = j['data']['awardType']
-                awardValue = j['data']['awardType']
-                if awardType == 1:
-                    self.set_log(f"🎉`{taskName}`任务完成，奖励`{awardValue}`积分")
-            else:
-                self.set_log(f"❌`{taskName}`任务失败，`{j['message']}`")
-        except (KeyError, ValueError):
-            self.set_log(f"💥`{taskName}` 任务失败，解析响应数据出错，可能是登录已失效： {response.text} ")
-
-    # 预约任务
-    def subscribes(self, skuId, taskName, taskId, activityId):
-        # self.set_log("🤖运行了 subscribes")
-        url = "https://msec.opposhop.cn/goods/web/subscribes/goodsSubscribeV1"
-        payload = f"type=1&skuId={skuId}"
-        headers = {
-            'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}",
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'okhttp/4.9.3.6'
-        }
-        response = requests.post(url, data=payload, headers=headers)
-        # response = requests.request("POST", url, headers=headers, data=payload)
-        # self.set_log("subscribes", response.text)
+        # self.set_log("integral_query", response.text)
         j = ujson.loads(response.text)
-        if j["code"] == 200:
-            self.task_receiveAward(taskName, taskId, activityId)
-        else:
-            message = j['errorMessage']
-            self.set_log(f"❌{taskName} 预约失败，{message}")
-
-    # 预约任务
-    def liveSubscribe(self, streamId, taskName, taskId, activityId):
-        # self.set_log("🤖运行了 liveSubscribe")
-        url = "https://msec.opposhop.cn/live/app/lives/subscribeV1"
-        payload = {'streamId': streamId}
-        headers = {
-            'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}",
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'okhttp/4.9.3.6'
-        }
-        response = requests.post(url, data=payload, headers=headers)
-        # response = requests.request("POST", url, headers=headers, data=payload)
-        # self.set_log("liveSubscribe", response.text)
-        j = ujson.loads(response.text)
-        if j["code"] == 200:
-            if j["data"]["isSubscribe"]:
-                self.set_log(f"❌{taskName}:{j["data"]["message"]}")
-            else:
-                self.set_log(f"✅{taskName}:直播预约成功")
-            self.task_receiveAward(taskName, taskId, activityId)
-        else:
-            message = j['errorMessage']
-            self.set_log(f"❌{taskName} 预约失败，{message}")
-
-    # 打开通知
-    def PushSwitch(self, activityId, Switch):
-        # self.set_log("🤖运行了 PushSwitch")
-
-        url = f"https://hd.opposhop.cn/api/cn/oapi/marketing/userEvent/openPushSwitch?activityId={activityId}&eventType={5 if Switch else 4}"
-        headers = {
-            'User-Agent': self.UA,
-            'Accept': "application/json, text/plain, */*",
-            'Cookie': f"apkPkg={self.apkPkg}; TOKENSID=TOKEN_{self.ck}"
-        }
-        response = requests.get(url, headers=headers)
         try:
-            j = ujson.loads(response.text)
-            self.set_log(f"{'✅打开' if Switch else '关闭'}通知权限：`{j['message']}`")
-        except (KeyError, ValueError):
-            self.set_log(f"💥签到失败，解析响应数据出错 {response.text} ")
-
-    # 获取点赞列表
-    def thumbsupList(self):
-        # self.set_log("🤖运行了 thumbsupList")
-        url = "https://hd.opposhop.cn/api/cn/oapi/java/ugc/frontend/hot/thread/v1/list?contentId=30&viewType=2&dataType=2&limit=10&page=1"
-
-        headers = {
-            'User-Agent': self.UA,
-            'Accept': "application/json, text/plain, */*",
-            'sa_distinct_id': "MEZ5RTA0N2REY3BWcXBZdmxSSzQ5QT09, MEZ5RTA0N2REY3BWcXBZdmxSSzQ5QT09",
-            'Cookie': f"apkPkg=com.oppo.community; TOKENSID=TOKEN_{self.ck}"
-        }
-
-        response = requests.get(url, headers=headers)
-
-        try:
-            j = ujson.loads(response.text)
             if j["code"] == 200:
-                # self.set_log("\u2705获取点赞列表成功")
-                for row in j["data"]["rows"]:
-                    tid = row["threadBaseInfoVO"]["tid"]
-                    uid = row["author"]["uid"]
-                    praise_status = row["praiseStatus"]
-                    # self.set_log(f"⏩准备点赞帖子 tid: {tid}, uid: {uid}")
-                    self.thumbsup(tid, uid)
-                    if praise_status != 0:  # 0 表示未点赞
-                        # self.set_log(f"\u2705帖子 tid: {tid} 已点赞，正在取消并再次签到")
-                        self.thumbsup(tid, uid)
-            else:
-                self.set_log(f"❌获取点赞列表失败，{j['msg']}")
+                self.set_log("💰当前余额：")
+                for i, element in enumerate(j["data"]):
+                    title = element["title"]
+                    text = element["text"]
+                    Type = element["type"]
+                    if Type == "coupon" or Type == "credit" or Type == "growing":
+                        self.set_log(f"👛{title}：`{text}`")
         except (KeyError, ValueError):
-            self.set_log(f"💥获取点赞列表失败，解析响应数据出错 {response.text} ")
+            self.set_log(f"💥获取积分额度失败，解析响应数据出错，可能是登录已失效 {response.text} ")
 
-    # 点赞
-    def thumbsup(self, tid, uid):
-        # self.set_log("🤖运行了 thumbsup")
-        url = "https://hd.opposhop.cn/api/cn/oapi/java/ugc/frontend/praise/thread"
+    # 积分过期情况查询
+    def check_expire_credits(self):
+        # self.set_log("🤖运行了 check_expire_credits")
+        url = "https://credit.heytap.com/cn/credit-web/credit-expire-info"
+
         payload = {
-            'tid': tid,
-            'uid': uid
+            "country": "CN",
+            "appPackage": self.apkPkg,
+            "imei": None,
+            "model": "PJD110",
+            "sessionId": None,
+            "timestamp": int(round(time.time() * 1000)),  # 当前时间戳
+            "token": f"TOKEN_{self.ck}"
+            # 注意：移除sign参数，服务器可能会自动处理或忽略
         }
-        headers = {
-            'User-Agent': self.UA,
-            'Cookie': f"apkPkg=com.oppo.community; TOKENSID=TOKEN_{self.ck}",
-        }
-        response = requests.post(url, data=payload, headers=headers)
-        try:
-            j = ujson.loads(response.text)
-            if j["code"] == 200:
-                self.set_log(f"🎉帖子 tid: {tid} ： {j['msg']}")
-            else:
-                self.set_log(f"❌帖子 tid: {tid} 点赞失败，{j['msg']}")
-        except (KeyError, ValueError):
-            self.set_log(f"💥帖子 tid: {tid} 点赞失败，解析响应数据出错 {response.text} ")
-
-    # 钱包签到
-    def continueSign(self):
-        # self.set_log("🤖运行了 continueSign")
-        url = "https://hwallet.finzfin.com/act/usersign/v1/continueSign"
-
-        payload = ujson.dumps({
-            "actId": "AID202207111442220933",
-            "funcId": "CONTINUEV2202209161649037309"
-        })
 
         headers = {
-            'User-Agent': "Mozilla/5.0 (Linux; Android 15; PJD110 Build/AP3A.240617.008; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.6723.58 Mobile Safari/537.36;webank/h5face;webank/2.0 JSBridge/1 wallet/5.37.5_a921687_250522 FinshellWebSDK/4.0.0.18",
-            'Accept': "application/json;charset=UTF-8",
-            'Content-Type': "application/json",
-            'x-token': f"TOKEN_{self.ck}",
+            'Host': 'credit.heytap.com',
+            'content-type': 'application/json;charset=UTF-8',
+            'user-agent': self.UA,
+            'x-requested-with': self.apkPkg,
+            'accept-language': 'zh-CN',
+            'Cookie': f"TOKENSID=TOKEN_{self.ck}"
         }
 
-        response = requests.post(url, data=payload, headers=headers)
-        # response = requests.request("POST", url, headers=headers, data=payload)
-        # self.set_log("continueSign", response.text)
         try:
-            j = ujson.loads(response.text)
-            if j.get("success"):
-                award_name = j["data"]["name"]
-                self.set_log(f"🎉签到成功，获得`{award_name}`")
-            else:
-                error_msg = j["error"]["msg"]
-                self.set_log(f"❌签到失败，`{error_msg}`")
-        except (KeyError, ValueError):
-            self.set_log(f"💥签到失败，解析响应数据出错 {response.text} ")
+            response = requests.post(url, json=payload, headers=headers)
+            response.raise_for_status()  # 检查HTTP错误
 
-    # 一加社区签到
-    def bbsSign(self):
-        # self.set_log("🤖运行了 bbsSign")
-        url = "https://bbs-api-cn.oneplus.com/task/api/sign/v1/create"
-        params = {
-            'ver': "bbs44102",
-            'timestamp': int(round(time.time() * 1000)),
-            # 'sign': "9ca3735c9d81a55663e6659b282afadb1b9dea4595cd4fedb3597c7f57a1c9ef"
-        }
-        headers = {
-            'User-Agent': "bbs/android/bbs44102",
-            'Accept-Encoding': "gzip",
-            'model': "PJD110",
-            'osver': "android15",
-            'romv': "PJD110_15.0.0.701(CN01)",
-            'lang': "zh-CN",
-            'token': f"TOKEN_{self.ck}",
-            'tz': "Asia/Shanghai"
-        }
-        response = requests.post(url, params=params, headers=headers)
-        # self.set_log(response.text)
-        try:
-            j = ujson.loads(response.text)
-            if j["code"] == 200:
-                if 'todaySigned' in j["data"]:
-                    self.set_log('➖今天已经签到过啦！')
+            j = json.loads(response.text)
+            if j["result"] == 10000:  # 正常响应
+                data = j["data"]
+
+                # 显示过期积分信息
+                if data.get("expireCredits", False):
+                    expire_amount = data.get("expireAmount", "未知")
+                    expire_date = data.get("expireDate", "未知")
+                    content = data.get("expireCreditsContent", f"{expire_amount} 积分将于 {expire_date} 到期")
+                    self.set_log(f"⚠️ {content}")
                 else:
-                    self.set_log('🎉`今天签到成功！`')
-                self.set_log('📝累计签到：`' + str(j['data']['signDays']) + '`天')
-                self.set_log('📝连续签到：`' + str(j['data']['continuousSignDays']) + '`天')
-                self.set_log('📝再连续签到`' + str(j['data']['extSignDays']) + '`天，可额外获得' + str(
-                    j['data']['extCredit']) + '积分')
+                    self.set_log("✅ 近期没有即将过期的积分")
+
+                # 显示积分规则提示
+                # if "clearTips" in data:
+                #     self.set_log("\n📝 积分规则：")
+                #     for tip in data["clearTips"]:
+                #         self.set_log(f"• {tip}")
             else:
-                self.set_log(f"❌一加社区签到失败，`{j['msg']}`")
-        except (KeyError, ValueError):
-            self.set_log(f"💥一加社区签到失败，解析响应数据出错{response.text}")
+                self.set_log(f"❌获取积分过期情况失败：{j.get('resultMsg', '未知错误')}")
+        except requests.exceptions.RequestException as e:
+            self.set_log(f"💥请求失败: {e}")
+        except json.JSONDecodeError as e:
+            self.set_log(f"💥解析响应数据失败: {e}")
+        except KeyError as e:
+            self.set_log(f"💥处理响应数据时出错: {e}")
+        except Exception as e:
+            self.set_log(f"💥未预期的错误: {e}")
+            if 'response' in locals():
+                self.set_log(f"响应内容: {response.text[:200]}...")  # 只显示前200个字符，避免日志过长
 
-    #  阅读签到
-    def zhangyueSign(self):
-        # self.set_log("🤖运行了 zhangyueSign")
-
-        url = "https://webboot.zhangyue.com/zycl/newwelfare/sign?usr=i4791337318"
-
-        headers = {
-            'User-Agent': self.UA,
-        }
-
-        response = requests.get(url, headers=headers)
-
-        try:
-            j = ujson.loads(response.text)
-            if j["code"] == 0:
-                # 签到成功，返回 signTitle 的结果
-                self.set_log(f'🎉`{j["body"]["signTitle"]}`')
-            else:
-                # 其他错误情况
-                self.set_log(f"➖阅读签到失败：`{j['msg']}`")
-        except (KeyError, ValueError):
-            self.set_log(f"💥阅读签到失败，解析响应数据出错{response.text}")
 
     # 新增日志
     def set_log(self, text):
@@ -1177,6 +1189,7 @@ class OPPO:
     def run(self):
         # 1. 优先读取环境变量
         OPPO_COOKIE = os.getenv("OPPO_COOKIE")
+
         if not OPPO_COOKIE:
             self.set_log("⚠️读取环境变量配置失败，正在读取本地文件。")
             # 2. 尝试读取本地oppoConfig.json
@@ -1215,7 +1228,7 @@ class OPPO:
                 502
             ), APP(  # OPPO社区
                 'd85d9aa65e007d66',
-                'com.oppo.store',
+                'com.oppo.community',
                 '1788913e6d9e4683b8b9ab0088733560',
                 1,
                 'oppo_community',
@@ -1251,21 +1264,28 @@ class OPPO:
             self.continueSign()  # 钱包签到
             self.set_log("\n----------阅读----------")
             self.zhangyueSign()  # 阅读签到
-            self.set_log("\n---------活动列表---------")
-            for app in self.appList:
-                self.get_activityId(app)  # 获取签到标识，同时添加动态获取的活动到activity_list
             if self.session_id != "":
                 self.set_log("\n-----OPPO会员小程序签到-----")
                 self.oppo_member_app_sign()  # OPPO会员小程序签到
-            self.set_log("\n--------各渠道签到--------")
-            self.shopping_signIn()  # 执行签到，包括原有活动ID和activity_list中的活动
-            self.set_log("\n--------累计签到奖励--------")
+
+
+            self.set_log("\n-------活动列表获取-------")
+            for app in self.appList:
+                self.get_activityId(app)  # 获取签到标识，同时添加动态获取的活动到activity_list
+
+            # self.set_log("\n--------各渠道签到--------")
+            # for activity in self.activity_list:
+            #     self.shopping_signIn(activity)  # 执行签到，包括原有活动ID和activity_list中的活动
+            self.set_log("\n--------累计签到奖励--------") # 累计签到奖励 + 每日签到
             for activity in self.activity_list:  # 使用专门地累计签到列表
                 self.check_cumulative_sign_in(activity)  # 检查累计签到奖励并领取
             self.set_log("\n------各渠道小任务签到------")
-            self.get_task()  # 获取任务列表
-            self.set_log("\n-----OPPO商城小程序抽奖-----")
-            self.do_raffle()  # 执行抽奖
+            for task_activity in self.activityId_taskActivityInfo:
+                self.get_task(task_activity)  # 获取任务列表
+            # OPPO商城抽奖活动下掉了
+            # self.set_log("\n-----OPPO商城小程序抽奖-----") 活动已关闭
+            # self.do_raffle()  # 执行抽奖
+
             if self.session_id != "":
                 self.set_log("\n------今日积分收入统计------")
                 self.today_credits_summary()  # 今日积分收入统计
