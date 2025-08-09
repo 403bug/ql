@@ -712,13 +712,12 @@ class OPPO:
         j = ujson.loads(response.text)
         if j["code"] == 200:
             if j["data"]["isSubscribe"]:
-                self.set_log(f"❌{taskName}:{j["data"]["message"]}")
+                self.set_log(f"❌{taskName}：{j["data"]["message"]}")
             else:
-                self.set_log(f"✅{taskName}:直播预约成功")
+                self.set_log(f"✅{taskName}：直播预约成功")
             self.task_receiveAward(taskName, taskId, activityId)
         else:
-            message = j['errorMessage']
-            self.set_log(f"❌{taskName} 预约失败，{message}")
+            self.set_log(f"❌{taskName} 预约失败，{j['errorMessage']}")
 
     # 打开通知
     def PushSwitch(self, activityId, Switch):
