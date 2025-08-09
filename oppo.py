@@ -44,6 +44,8 @@ import time
 from datetime import datetime
 import requests
 import ujson
+from openpyxl.styles.builtins import title
+
 import notify
 
 
@@ -1300,7 +1302,11 @@ class OPPO:
             #
             # print(self.get_log())
 
-            notify.send("OPPO签到", self.get_log())
+            if int(len(ck_list)) > 1:
+                notifyTitle = f"OPPO签到 {ck_list.index(tokens) + 1} / {len(ck_list)}"
+            else :
+                notifyTitle = "OPPO签到"
+            notify.send(notifyTitle, self.get_log())
             # except Exception as e:
             # self.set_log("💥出错了！详细错误👇错误CK👉" + mt_token)
             # self.set_log(e)
