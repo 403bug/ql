@@ -40,7 +40,6 @@ import base64
 import json
 import os
 import re
-import this
 import time
 from datetime import datetime
 import requests
@@ -105,7 +104,7 @@ class OPPO:
         # self.set_log("🤖运行了__init__")
         self.ck = ''
         self.apkPkg = 'com.oppo.store'
-        self.UA = 'Mozilla/5.0 (Linux; Android 15; PJD110 Build/AP3A.240617.008; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.6723.58 Mobile Safari/537.36 oppostore/404503 ColorOS/V15.0.0 brand/OnePlus model/PJD110'
+        self.UA = 'Mozilla/5.0 (Linux; Android 15; PJD110 Build/AP3A.240617.008; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.6723.58 Mobile Safari/537.36  ColorOS/V15.0.0 brand/OnePlus model/PJD110'
         # 修改为任务活动对象列表
         self.activityId_taskActivityInfo = []
         self.activity_list = []
@@ -160,7 +159,7 @@ class OPPO:
         })
 
         headers = {
-            'User-Agent': "Mozilla/5.0 (Linux; Android 15; PJD110 Build/AP3A.240617.008; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.6723.58 Mobile Safari/537.36;webank/h5face;webank/2.0 JSBridge/1 wallet/5.37.5_a921687_250522 FinshellWebSDK/4.0.0.18",
+            'User-Agent': self.UA,
             'Accept': "application/json;charset=UTF-8",
             'Content-Type': "application/json",
             'x-token': f"TOKEN_{self.ck}",
@@ -183,8 +182,9 @@ class OPPO:
     #  阅读签到
     def zhangyueSign(self):
         # self.set_log("🤖运行了 zhangyueSign")
+        zhangyueUSR = "i4791337318"
 
-        url = "https://webboot.zhangyue.com/zycl/newwelfare/sign?usr=i4791337318"
+        url = f"https://webboot.zhangyue.com/zycl/newwelfare/sign?usr={zhangyueUSR}"
 
         headers = {
             'User-Agent': self.UA,
@@ -584,7 +584,9 @@ class OPPO:
                     # self.set_log(f"🤓👆🏻获取到任务：{taskName}，任务ID：{taskId}，活动ID：{activityId}，任务类型：{taskType}，任务状态：{taskStatus}，skuId：{skuId}")
                     if taskStatus == 1:  # 未完成
                         self.set_log(f"🤓👆🏻`{taskName}` 任务还未完成，即将执行：")
-                        # 这里写判断类型，并进行相应的操作
+                        # 这里写判断类型，并进行相应的操作：
+                        # 5：预约直播，6：购买商品，10：预约任务，14：学生认证，15:关注公众号，
+                        # 17：首单付费，18：内容点赞，23：打开通知
                         if taskType in [1, 3, 9, 16, 17]:  # 经典提交任务即可领取奖励类型
                             self.task_signInOrShareTask(taskName, taskId, activityId)
                         elif taskType in [4,10]:  # 预约任务
@@ -1208,7 +1210,7 @@ class OPPO:
 
 
         ck_list = OPPO_COOKIE.split('&')
-        self.set_log(f"---------共`{str(int(len(ck_list)))}`个账号---------")
+        # self.set_log(f"---------共`{str(int(len(ck_list)))}`个账号---------")
         # 配置获取活动ID的encryptedId
         self.appList = [
             APP(  # OPPO小程序 + OPPO商城
@@ -1243,8 +1245,9 @@ class OPPO:
         ]
 
         for tokens in ck_list:
-            if int(len(ck_list)) > 1:
-                self.set_log(f"\n---------第`{ck_list.index(tokens) + 1}`个账号---------")
+            self.Log = ""
+            # if int(len(ck_list)) > 1:
+            self.set_log(f"\n---------第`{ck_list.index(tokens) + 1} / {len(ck_list)}`个账号---------")
             my_token = tokens.split('#')
             if my_token == '' or int(len(my_token)) != 2:
                 self.set_log("⚠️账号格式有误，请检查账号后进行重试")
@@ -1274,14 +1277,14 @@ class OPPO:
 
             # self.set_log("\n--------各渠道签到--------")
             # for activity in self.activity_list:
-            #     self.shopping_signIn(activity)  # 执行签到，包括原有活动ID和activity_list中的活动
+            #     self.shopping_signIn(activity)  # 执行签到，已融入到 累计签到奖励
             self.set_log("\n--------累计签到奖励--------") # 累计签到奖励 + 每日签到
-            for activity in self.activity_list:  # 使用专门地累计签到列表
-                self.check_cumulative_sign_in(activity)  # 检查累计签到奖励并领取
+            for activity in self.activity_list:  # 使用签到列表,检查累计签到奖励并领取
+                self.check_cumulative_sign_in(activity)
             self.set_log("\n------各渠道小任务签到------")
             for task_activity in self.activityId_taskActivityInfo:
                 self.get_task(task_activity)  # 获取任务列表
-            # OPPO商城抽奖活动下掉了
+            # OPPO商城抽奖活动下掉了，后续会变为所有的签到列表，但是很费积分，故不打算做
             # self.set_log("\n-----OPPO商城小程序抽奖-----") 活动已关闭
             # self.do_raffle()  # 执行抽奖
 
