@@ -11,7 +11,7 @@ getenv name: OPPO_COOKIE
 getenv value: 账号1 TOKENSID#账号1 session_id&账号2 TOKENSID#账号2 session_id&...
             请阅读 `Problem-3` 进行配置session_id
 
-Update: 2025/07/15
+Update: 2025/08/10
 
 Description:
     1. 新增了token使用期限检查功能，支持多账号签到
@@ -44,7 +44,6 @@ import time
 from datetime import datetime
 import requests
 import ujson
-from openpyxl.styles.builtins import title
 
 import notify
 
@@ -716,7 +715,7 @@ class OPPO:
         j = ujson.loads(response.text)
         if j["code"] == 200:
             if j["data"]["isSubscribe"]:
-                self.set_log(f"❌{taskName}：{j["data"]["message"]}")
+                self.set_log(f"❌{taskName}：{j['data']['message']}")
             else:
                 self.set_log(f"✅{taskName}：直播预约成功")
             self.task_receiveAward(taskName, taskId, activityId)
@@ -1255,8 +1254,7 @@ class OPPO:
                 self.set_log("⚠️账号格式有误，请检查账号后进行重试")
                 continue
             # try:
-            self.ck = my_token[0]
-            self.session_id = my_token[1]
+            self.ck, self.session_id = my_token
             self.set_log(f"\n---------账号Token合法性检测开始处理---------")
             # 检测token是否合法，如果不合法则跳过此账号
             if not self.tokenCheck():
