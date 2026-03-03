@@ -1194,7 +1194,7 @@ class OPPO:
 
         if not OPPO_COOKIE:
             self.set_log("⚠️读取环境变量配置失败，正在读取本地文件。")
-            # 2. 尝试读取本地oppoConfig.json
+            # 2. 尝试读取本地sjmyConfig.json
             try:
                 with open('sjmyConfig.json', 'r', encoding='utf-8') as f:
                     config = json.load(f)
