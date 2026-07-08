@@ -26,21 +26,36 @@ def add_log(index, message = None, title=None):
     logs[index]['message'] += message + '\n'
     print(message)
 
-def send_log(index=None,title = None):
+def send_log(index=None,title = None, is_final=False):
+  global send_count
+  # 最后的总结不受限制，一定要发送
+  if is_final:
+    all_title = title or '成绩查询汇总'
+    all_message = ''
+    for log in logs:
+      all_message += f"<hr/><h1>{log['Title']}</h1>{log['message']}"
+    notify.send(all_title, all_message)
+    return
+  # 检查是否超过最大发送次数
+  if send_count >= MAX_SEND_COUNT:
+    print(f"⚠️ 已达到最大发送次数 {MAX_SEND_COUNT}，跳过本次通知")
+    return
   if index is not None:
     notify.send(logs[index]['Title'], logs[index]['message'])
+    send_count += 1
   else:
     all_title = title or '成绩查询汇总'
     all_message = ''
     for log in logs:
       all_message += f"<hr/><h1>{log['Title']}</h1>{log['message']}"
     notify.send(all_title, all_message)
+    send_count += 1
 
 origin_exit = exit
 
 def exit(message='', title=None):
   add_log(-1,message)
-  send_log(title=title)
+  send_log(title=title, is_final=True)
   origin_exit()
 # 读取配置文件
 def init_data_from_config():
@@ -118,6 +133,8 @@ def get_score(xh):
   ).json()
 
 globals_hasNewScore = False
+send_count = 0  # 发送次数计数器
+MAX_SEND_COUNT = 4  # 最大发送次数
 # 初始化配置信息
 init_data_from_config()
 # 解析配置
