@@ -28,7 +28,7 @@ import notify
 
 
 class FuturePPO:
-    BASE_URL = "https://api2.futureppo.top/"
+    BASE_URL = "https://api2.futureppo.top"
     QUOTA_PER_YUAN = 500000
 
     def __init__(self):
@@ -58,6 +58,22 @@ class FuturePPO:
             headers['cookie'] = f'session={self.session}'
         return headers
 
+    @staticmethod
+    def _response_json(resp):
+        try:
+            return resp.json()
+        except ValueError as exc:
+            request_id = resp.headers.get('x-oneapi-request-id')
+            details = f"HTTP {resp.status_code}"
+            if resp.headers.get('content-type'):
+                details += f", Content-Type: {resp.headers['content-type']}"
+            if request_id:
+                details += f", request id: {request_id}"
+            body = resp.text.strip().replace("\n", " ")
+            if body:
+                details += f", response: {body[:200]}"
+            raise RuntimeError(f"接口返回的不是有效 JSON（{details}）") from exc
+
     # 登录获取 session 凭证
     def login(self):
         url = f"{self.BASE_URL}/api/user/login?turnstile="
@@ -81,7 +97,7 @@ class FuturePPO:
                     session = part[len('session='):]
                     break
 
-        j = resp.json()
+        j = self._response_json(resp)
         if not j.get('success') or not session:
             raise Exception(f"登录失败: {j.get('message') or resp.text[:200]}")
 
@@ -99,7 +115,7 @@ class FuturePPO:
 
         resp = requests.post(url, headers=headers, timeout=30)
         resp.raise_for_status()
-        j = resp.json()
+        j = self._response_json(resp)
 
         if j.get('success'):
             data = j.get('data', {}) or {}
@@ -117,7 +133,7 @@ class FuturePPO:
 
         resp = requests.get(url, headers=headers, timeout=30)
         resp.raise_for_status()
-        j = resp.json()
+        j = self._response_json(resp)
 
         if not j.get('success'):
             self.set_log(f"  ❌查询用户信息失败:{j.get('message')}")

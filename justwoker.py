@@ -8,23 +8,6 @@ Update: 2026/10/11
 配置来源：只读脚本目录下的 sjmyConfig.json，键名 JUSTWOKER_COOKIE。
 （不再读取环境变量。）
 
-【重要】关于 new_api_refresh 会失效这件事（实测结论，2026-10-10）
-    本站（New-API v1.0.0-rc.23）的 new_api_refresh Cookie 不是长期稳定的凭证：
-      · 每次调用 /api/user/auth/refresh 成功，服务端都会下发一个新的 secret（sid 不变）；
-      · 旧值不会立刻失效 —— 实测刷新后 7 秒内旧值仍可用，但约 15 分钟后旧值就返回
-        401 AUTH_SESSION_REVOKED；
-      · session 本身也可能被整体撤销（例如在别处重新登录），届时该 session 下所有值一起失效；
-      · /api/user/auth/refresh 有频率限制，触发后返回 429 并带 Retry-After（实测 720 秒）。
-    脚本的处理方式：
-      1. sjmyConfig.json 里的 JUSTWOKER_COOKIE 是唯一凭证来源，支持两种写法：
-         · 字符串：`"a2565661-99f2-4d01-b0a4-731269beb795.596f681b..."`
-         · 对象：`{"cookies": ["<最新值>"], "updated_at": 1791658692}`
-      2. 首次用配置里的凭证换到 access_token，同时把服务端下发的新 Cookie
-         写回 sjmyConfig.json 的 JUSTWOKER_COOKIE（只改这一项，其他配置不动）。
-      3. 之后每次运行都用配置里最新的 Cookie（永远是最新值），成功后再覆盖保存。
-    ⚠️ 浏览器和脚本共用同一个 session，你在浏览器访问该站会触发同样的滚动，
-       把脚本存下来的 Cookie 顶掉。要长期稳定跑，建议脚本专用一个 session。
-
 说明:
     API 地址: https://api.justwoker.icu
     本站是 New-API 新版，认证方式：
