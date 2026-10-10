@@ -28,7 +28,7 @@ import notify
 
 
 class AgentRouter:
-    BASE_URL = "https://agentrouter.org"
+    BASE_URL = "https://ps.air-outer.com"
     QUOTA_PER_YUAN = 500000
 
     def __init__(self):

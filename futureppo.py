@@ -9,7 +9,7 @@ getenv name: FUTUREPPO_COOKIE
 getenv value: 账号1 username#账号1 password&账号2 username#账号2 password&...
 
 说明:
-    API 地址: https://api.futureppo.top
+    API 地址: https://api2.futureppo.top/
     登录接口会返回 Set-Cookie 头，携带 session；签到/查询接口需带上 session。
     下面代码通过登录接口拿到 session 后，再请求签到和用户信息。
     quota 单位换算：500000 等于 1 元。
@@ -28,7 +28,7 @@ import notify
 
 
 class FuturePPO:
-    BASE_URL = "https://api.futureppo.top"
+    BASE_URL = "https://api2.futureppo.top/"
     QUOTA_PER_YUAN = 500000
 
     def __init__(self):
