@@ -182,9 +182,9 @@ class JustWoker:
     # ---------- 随机延迟 ----------
     def random_delay(self):
         try:
-            max_min = float(os.getenv("JUSTWOKER_DELAY_MAX", "15"))
+            max_min = float(os.getenv("JUSTWOKER_DELAY_MAX", "5"))
         except ValueError:
-            max_min = 15
+            max_min = 5
         if max_min <= 0:
             return
         delay = random.uniform(1, max_min)
