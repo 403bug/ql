@@ -127,12 +127,12 @@ class AgentRouter:
     def get_log(self):
         return self.Log.replace("\n", "\n\n")  # 适配 markdown 换行
 
-    # 随机延迟，默认 1~15 分钟；可通过 AGENTROUTER_DELAY_MAX 控制最大分钟，0 表示不延迟
+    # 随机延迟，默认 1~5 分钟；可通过 AGENTROUTER_DELAY_MAX 控制最大分钟，0 表示不延迟
     def random_delay(self):
         try:
-            max_min = float(os.getenv("AGENTROUTER_DELAY_MAX", "15"))
+            max_min = float(os.getenv("AGENTROUTER_DELAY_MAX", "5"))
         except ValueError:
-            max_min = 15
+            max_min = 5
         if max_min <= 0:
             return
         # 随机延迟 1 到 max_min 分钟

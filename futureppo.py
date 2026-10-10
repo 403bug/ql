@@ -42,9 +42,9 @@ class FuturePPO:
                    'AppleWebKit/537.36 (KHTML, like Gecko) '
                    'Chrome/144.0.0.0 Safari/537.36')
 
-    def _headers(self, referer="https://api.futureppo.top/console"):
+    def _headers(self, referer="https://api2.futureppo.top/console"):
         headers = {
-            'host': 'api.futureppo.top',
+            'host': 'api2.futureppo.top',
             'user-agent': self.UA,
             'accept': 'application/json, text/plain, */*',
             'content-type': 'application/json',
@@ -140,12 +140,12 @@ class FuturePPO:
     def get_log(self):
         return self.Log.replace("\n", "\n\n")  # 适配 markdown 换行
 
-    # 随机延迟，默认 1~15 分钟；可通过 FUTUREPPO_DELAY_MAX 控制最大分钟，0 表示不延迟
+    # 随机延迟，默认 1~5 分钟；可通过 FUTUREPPO_DELAY_MAX 控制最大分钟，0 表示不延迟
     def random_delay(self):
         try:
-            max_min = float(os.getenv("FUTUREPPO_DELAY_MAX", "15"))
+            max_min = float(os.getenv("FUTUREPPO_DELAY_MAX", "5"))
         except ValueError:
-            max_min = 15
+            max_min = 5
         if max_min <= 0:
             return
         # 随机延迟 1 到 max_min 分钟

@@ -5,8 +5,26 @@ cron: 0 4 * * *
 new Env('justwoker额度查询');
 Update: 2026/10/11
 
-getenv name: JUSTWOKER_COOKIE
-getenv value: 账号1凭证&账号2凭证&...
+配置来源：只读脚本目录下的 sjmyConfig.json，键名 JUSTWOKER_COOKIE。
+（不再读取环境变量。）
+
+【重要】关于 new_api_refresh 会失效这件事（实测结论，2026-10-10）
+    本站（New-API v1.0.0-rc.23）的 new_api_refresh Cookie 不是长期稳定的凭证：
+      · 每次调用 /api/user/auth/refresh 成功，服务端都会下发一个新的 secret（sid 不变）；
+      · 旧值不会立刻失效 —— 实测刷新后 7 秒内旧值仍可用，但约 15 分钟后旧值就返回
+        401 AUTH_SESSION_REVOKED；
+      · session 本身也可能被整体撤销（例如在别处重新登录），届时该 session 下所有值一起失效；
+      · /api/user/auth/refresh 有频率限制，触发后返回 429 并带 Retry-After（实测 720 秒）。
+    脚本的处理方式：
+      1. sjmyConfig.json 里的 JUSTWOKER_COOKIE 是唯一凭证来源，支持两种写法：
+         · 字符串：`"a2565661-99f2-4d01-b0a4-731269beb795.596f681b..."`
+         · 对象：`{"cookies": ["<最新值>"], "updated_at": 1791658692}`
+      2. 首次用配置里的凭证换到 access_token，同时把服务端下发的新 Cookie
+         写回 sjmyConfig.json 的 JUSTWOKER_COOKIE（只改这一项，其他配置不动）。
+      3. 之后每次运行都用配置里最新的 Cookie（永远是最新值），成功后再覆盖保存。
+    ⚠️ 浏览器和脚本共用同一个 session，你在浏览器访问该站会触发同样的滚动，
+       把脚本存下来的 Cookie 顶掉。要长期稳定跑，建议脚本专用一个 session。
+
 说明:
     API 地址: https://api.justwoker.icu
     本站是 New-API 新版，认证方式：
@@ -20,7 +38,6 @@ getenv value: 账号1凭证&账号2凭证&...
 """
 import os
 import json
-import hashlib
 import random
 import time
 
@@ -34,7 +51,6 @@ class JustWoker:
     DEFAULT_QUOTA_PER_UNIT = 500000
     CONFIG_FILE = "sjmyConfig.json"
     CONFIG_KEY = "JUSTWOKER_COOKIE"
-    STATE_FILE = ".justwoker_state.json"
 
     def __init__(self):
         self.refresh_cookie = ''
@@ -43,9 +59,7 @@ class JustWoker:
         self.quota_per_unit = self.DEFAULT_QUOTA_PER_UNIT
         self.Log = ""
         self.session = None
-        self.cred_index = 0
-        self.src_hash = ''
-        self.state = {}
+        self.config = {}
 
         self.UA = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                    'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -152,29 +166,27 @@ class JustWoker:
         self.set_log(f"  🔢请求次数:`{data.get('request_count', 0)}`")
         return data
 
-    # ---------- 状态文件：保存轮换后的 Cookie ----------
-    def load_state(self, source):
-        """读取状态文件。source 变化（用户换了新凭证）时自动丢弃旧状态。"""
-        try:
-            with open(self.STATE_FILE, 'r', encoding='utf-8') as f:
-                state = json.load(f)
-        except Exception:
-            return {}
-        if not isinstance(state, dict):
-            return {}
-        if state.get('source') != source:
-            self.set_log("  ℹ️检测到凭证来源已变更，丢弃旧的状态文件")
-            return {}
-        return state
+    # ---------- 配置读写：只动 JUSTWOKER_COOKIE 这一项 ----------
+    def load_cookie(self):
+        """读取 sjmyConfig.json 的 JUSTWOKER_COOKIE，兼容字符串和对象两种写法。"""
+        with open(self.CONFIG_FILE, 'r', encoding='utf-8') as f:
+            self.config = json.load(f)
+        value = self.config.get(self.CONFIG_KEY)
+        if isinstance(value, dict):
+            cookies = value.get('cookies') or []
+            return (cookies[0] if cookies else '').strip()
+        if isinstance(value, str):
+            return value.strip()
+        return ''
 
-    def save_state(self):
-        try:
-            with open(self.STATE_FILE, 'w', encoding='utf-8') as f:
-                json.dump(self.state, f, ensure_ascii=False, indent=2)
-            return True
-        except Exception as e:
-            self.set_log(f"  ⚠️写入状态文件失败:{e}（青龙请确认脚本目录可写）")
-            return False
+    def save_cookie(self, new_cookie):
+        """把轮换后的新 Cookie 写回 JUSTWOKER_COOKIE，其他配置项原样保留。"""
+        self.config[self.CONFIG_KEY] = {
+            'cookies': [new_cookie],
+            'updated_at': int(time.time()),
+        }
+        with open(self.CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(self.config, f, ensure_ascii=False, indent=2)
 
     # ---------- 记录日志 ----------
     def set_log(self, text):
@@ -187,9 +199,9 @@ class JustWoker:
     # ---------- 随机延迟 ----------
     def random_delay(self):
         try:
-            max_min = float(os.getenv("JUSTWOKER_DELAY_MAX", "5"))
+            max_min = float(os.getenv("JUSTWOKER_DELAY_MAX", "15"))
         except ValueError:
-            max_min = 5
+            max_min = 15
         if max_min <= 0:
             return
         delay = random.uniform(1, max_min)
@@ -197,16 +209,19 @@ class JustWoker:
         time.sleep(delay * 60)
 
     # ---------- 单账号处理 ----------
-    def run_account(self, raw_cred, index):
-        self.cred_index = index
+    def run_account(self):
         self.refresh_cookie = ''
         self.access_token = ''
         self.user_id = ''
         self.session = requests.Session()
 
-        cookie = (raw_cred or '').strip()
+        try:
+            cookie = self.load_cookie()
+        except Exception as e:
+            self.set_log(f"❌读取 {self.CONFIG_FILE} 失败:{e}")
+            return
         if not cookie:
-            self.set_log("❌凭证为空，已跳过")
+            self.set_log(f"❌{self.CONFIG_KEY} 未配置或为空，已跳过")
             return
 
         self.set_log("\n---------开始查询额度---------")
@@ -216,85 +231,45 @@ class JustWoker:
             self.set_log(f"  ⚠️读取站点配置失败:{e}")
 
         self.set_log("  🔐认证方式:`new_api_refresh Cookie`")
-        # 候选顺序：状态文件里轮换后的 Cookie → 配置里的原始凭证
-        saved_cookies = self.state.get('cookies') or []
-        saved = saved_cookies[index] if index < len(saved_cookies) and saved_cookies[index] else ''
-        candidates = []
-        if saved and saved != cookie:
-            candidates.append(('状态文件', saved))
-        candidates.append(('配置凭证', cookie))
-
-        last_err = None
-        user = {}
-        for source, ck in candidates:
-            self.refresh_cookie = ck
-            try:
-                new_cookie, user = self.refresh(ck)
-            except Exception as e:
-                last_err = e
-                self.set_log(f"  ⚠️用{source}换取 access_token 失败:{e}")
-                self.access_token = ''
-                continue
-            self.set_log(f"  ✅用{source}换取 access_token 成功")
-            # 保存轮换后的新 Cookie
-            if new_cookie:
-                while len(self.state.setdefault('cookies', [])) <= index:
-                    self.state['cookies'].append('')
-                self.state['cookies'][index] = new_cookie
-                self.state['source'] = self.src_hash
-                self.state['updated_at'] = int(time.time())
-                if self.save_state():
-                    self.set_log(f"  💾已保存轮换后的 new_api_refresh 到 `{self.STATE_FILE}`")
-            else:
-                self.set_log("  ℹ️服务端未下发新 Cookie，沿用当前值")
-            break
-        else:
-            self.set_log(f"  ❌认证失败:{last_err or '刷新凭证失败'}")
+        self.refresh_cookie = cookie
+        try:
+            new_cookie, user = self.refresh(cookie)
+        except Exception as e:
+            self.set_log(f"  ❌认证失败:{e}")
             self.set_log("  💡提示：new_api_refresh 已被轮换或 session 被撤销，"
                          "请在浏览器重新登录后重新复制 Cookie 填到 "
-                         f"{self.CONFIG_KEY}，脚本会自动接管后续轮换")
+                         f"{self.CONFIG_FILE} 的 {self.CONFIG_KEY}，脚本会自动接管后续轮换")
             return
+
+        self.set_log("  ✅换取 access_token 成功")
+        # 保存轮换后的新 Cookie
+        if new_cookie:
+            try:
+                self.save_cookie(new_cookie)
+                self.set_log(f"  💾已保存轮换后的 new_api_refresh 到 `{self.CONFIG_FILE}`")
+            except Exception as e:
+                self.set_log(f"  ⚠️写入 {self.CONFIG_FILE} 失败:{e}")
+        else:
+            self.set_log("  ℹ️服务端未下发新 Cookie，沿用当前值")
 
         # refresh 响应里已含完整用户信息，直接展示
         self._print_user(user)
 
     def run(self):
-        JUSTWOKER_COOKIE = os.getenv("JUSTWOKER_COOKIE")
-        if not JUSTWOKER_COOKIE:
-            self.set_log("❌未读取到 JUSTWOKER_COOKIE，请检查环境变量或配置文件")
-            try:
-                with open(self.CONFIG_FILE, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                    if self.CONFIG_KEY in config:
-                        JUSTWOKER_COOKIE = config[self.CONFIG_KEY]
-            except Exception as e:
-                self.set_log(f'❌读取配置文件获取 JUSTWOKER_COOKIE 失败：{e}')
-                exit()
-            if not JUSTWOKER_COOKIE:
-                notify.send("JUSTWOKER_COOKIE", '❌JUSTWOKER_COOKIE 未配置')
-                self.set_log('❌JUSTWOKER_COOKIE 未配置')
-                exit()
+        try:
+            cookie = self.load_cookie()
+        except Exception as e:
+            notify.send("JUSTWOKER_COOKIE", f'❌读取 {self.CONFIG_FILE} 失败：{e}')
+            self.set_log(f"❌读取 {self.CONFIG_FILE} 失败:{e}")
+            exit()
+        if not cookie:
+            notify.send("JUSTWOKER_COOKIE", f'❌{self.CONFIG_KEY} 未配置')
+            self.set_log(f'❌{self.CONFIG_KEY} 未配置')
+            exit()
         self.set_log("✅JUSTWOKER_COOKIE 读取成功")
 
-        # 状态文件按「原始凭证的指纹」校验，用户换凭证后自动作废旧状态
-        src_hash = hashlib.md5(JUSTWOKER_COOKIE.encode('utf-8')).hexdigest()
-        self.src_hash = src_hash
-        self.state = self.load_state(src_hash)
-        if self.state:
-            self.set_log("✅已加载轮换状态文件")
-        self.state['source'] = src_hash
-
         self.random_delay()
-
-        ck_list = JUSTWOKER_COOKIE.split('&')
-        self.set_log("---------共" + str(len(ck_list)) + "个账号---------")
-        for index, tokens in enumerate(ck_list):
-            if len(ck_list) > 1:
-                self.set_log(f"\n---------第{index + 1}个账号---------")
-            try:
-                self.run_account(tokens, index)
-            except Exception as e:
-                self.set_log(f"  ❌处理异常:{e}")
+        self.run_account()
 
         print("\n\n")  # 分隔通知消息
         notify.send("justwoker额度查询", self.get_log())
